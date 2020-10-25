@@ -41,11 +41,20 @@ def create_app():
             example = Restaurant()
             example.name = 'Trial Restaurant'
             example.likes = 42
+            example.capacity = 30
+            example.cuisine_type= ['ciao','pippo']
             example.phone = 555123456
             example.lat = 43.720586
             example.lon = 10.408347
             db.session.add(example)
             db.session.commit()
+        q = db.session.query(Restaurant).filter(Restaurant.id == 1)
+        restaurant = q.first()
+        print(restaurant)
+        print(restaurant.cuisine_type)
+
+
+
 
     return app
 
@@ -53,3 +62,4 @@ def create_app():
 if __name__ == '__main__':
     app = create_app()
     app.run()
+

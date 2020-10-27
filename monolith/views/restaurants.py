@@ -7,6 +7,21 @@ from monolith.forms import UserForm
 
 restaurants = Blueprint('restaurants', __name__)
 
+@restaurants.route('/create_restaurant', methods=['GET','POST']) # why GET?
+def create_restaurant():
+    form = RestaurantForm()    
+    if request.method == 'POST':
+
+        if form.validate_on_submit():
+            new_restaurant = User()
+            form.populate_obj(new_restaurant)
+            db.session.add(new_restaurant)
+            db.session.commit()
+            return redirect('/restaurants')
+
+    return render_template('create_restaurant.html', form=form)
+
+
 @restaurants.route('/restaurants')
 def _restaurants(message=''):
     allrestaurants = db.session.query(Restaurant)

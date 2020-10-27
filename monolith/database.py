@@ -204,3 +204,4 @@ class Notification(db.Model):
     type_ = db.Column(db.Integer)  # 0=through email, 1=phone, 2=app
     date = db.Column(db.DateTime)
 
+#comment

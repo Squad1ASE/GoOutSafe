@@ -1,8 +1,6 @@
 from werkzeug.security import generate_password_hash, check_password_hash
-import enum
-
-# is Object map scheme
-from sqlalchemy.orm import relationship
+import enum  # is used?
+from sqlalchemy.orm import relationship  # is Object map scheme
 import datetime as dt
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.schema import CheckConstraint
@@ -173,4 +171,36 @@ class Dishes(db.Model):
     name = db.Column(db.Unicode(128))
     ingredients = db.Column(db.PickleType)
 
+
+class ReportOfPositivity(db.Model):
+    __tablename__  = 'report_of_positivity'
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    user = relationship('User', foreign_keys='ReportOfPositivity.user_id')
+
+    date = db.Column(db.DateTime)
+
+
+class Quarantine(db.Model):
+    __tablename__ = 'quarantine'
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    user = relationship('User', foreign_keys='Quarantine.user_id')
+
+    start_date = db.Column(db.DateTime)
+    end_date = db.Column(db.DateTime)
+
+    active = db.Column(db.Boolean, default=True)
+
+
+class Notification(db.Model):
+    __tablename__ = 'notification'
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    user = relationship('User', foreign_keys='Notification.user_id')
+
+    message = db.Column(db.Unicode(128))
+    pending = db.Column(db.Boolean, default=True)
+    type_ = db.Column(db.Integer)  # 0=through email, 1=phone, 2=app
+    date = db.Column(db.DateTime)
 

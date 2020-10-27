@@ -24,6 +24,6 @@ class RestaurantForm(FlaskForm):
     phone = f.StringField('phone', validators=[DataRequired()])
     # maybe owner has to complete the tables descritions and capacity is 
     # automatically derived from tables settings
-    capacity = f.StringField('capacity', validators=[DataRequired()])
+    # capacity = f.StringField('capacity', validators=[DataRequired()])
     prec_measures = f.StringField('prec_measures', validators=[DataRequired()])
-    display = ['name', 'lat', 'lon', 'phone', 'capacity','prec_measures']
+    display = ['name', 'lat', 'lon', 'phone', 'prec_measures']

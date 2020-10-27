@@ -4,22 +4,34 @@ from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
 from monolith.forms import UserForm
+from monolith.forms import RestaurantForm
+from monolith.views import auth
 
 restaurants = Blueprint('restaurants', __name__)
 
 @restaurants.route('/create_restaurant', methods=['GET','POST']) # why GET?
 def create_restaurant():
-    form = RestaurantForm()    
-    if request.method == 'POST':
+    if current_user is not None and hasattr(current_user, 'id'):
 
-        if form.validate_on_submit():
-            new_restaurant = User()
-            form.populate_obj(new_restaurant)
-            db.session.add(new_restaurant)
-            db.session.commit()
-            return redirect('/restaurants')
+        form = RestaurantForm()    
+        if request.method == 'POST':
 
-    return render_template('create_restaurant.html', form=form)
+            if form.validate_on_submit():
+                new_restaurant = Restaurant()
+                form.populate_obj(new_restaurant)
+                new_restaurant.owner = current_user.id
+                new_restaurant.likes = 0
+                db.session.add(new_restaurant)
+                db.session.commit()
+                return redirect('/restaurants')
+
+        return render_template('create_restaurant.html', form=form)
+
+    else:
+
+        return redirect('/login')
+        
+
 
 
 @restaurants.route('/restaurants')

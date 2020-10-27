@@ -67,7 +67,7 @@ def create_app():
 
             db.session.add(example)
             db.session.commit()
-
+        '''
         q = db.session.query(Restaurant).filter(Restaurant.id == 1)
         restaurant = q.first()
         print(restaurant)
@@ -86,12 +86,13 @@ def create_app():
 
             db.session.add(example)
             db.session.commit()
-
+        
         q = db.session.query(Table).filter(Table.id == 1)
         table = q.first()
         print(table)
         print(table.name)
         print(table.restaurant_id)
+        
 
 
         q = db.session.query(WorkingDay).filter(WorkingDay.id == 1)
@@ -281,7 +282,7 @@ def create_app():
         print(note)
         print(note.user_id)
         print(note.message)
-
+        '''
 
     return app
 

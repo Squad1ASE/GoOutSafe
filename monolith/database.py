@@ -1,28 +1,32 @@
 from werkzeug.security import generate_password_hash, check_password_hash
-import enum  # is used?
-from sqlalchemy.orm import relationship  # is Object map scheme
-import datetime as dt
+from sqlalchemy.orm import relationship, validates  # is Object map scheme
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.schema import CheckConstraint
 
 db = SQLAlchemy()
 
 
-# the following consist of tables inside the db
-# tables are defined using model
+# the following consist of tables inside the db tables are defined using model
 class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
-    email = db.Column(db.Unicode(128), nullable=False, unique=True)
+    email = db.Column(db.String, nullable=False, unique=True)  
+    @validates('email')
+    def validate_email(self, key, user):
+        assert '@' and '.' in user  #min email possible: a@b.c
+        return user
+
     firstname = db.Column(db.Unicode(128))
     lastname = db.Column(db.Unicode(128))
     password = db.Column(db.Unicode(128), nullable=False) 
     dateofbirth = db.Column(db.DateTime)
+
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)
     is_anonymous = False
     role = db.Column(db.Unicode(128)) # 0=customer, 1=rest_owner, 2=Asl
+
 
     def __init__(self, *args, **kw):
         super(User, self).__init__(*args, **kw)
@@ -42,7 +46,6 @@ class User(db.Model):
 
     def get_id(self):
         return self.id
-
 
 
 
@@ -89,7 +92,9 @@ class WorkingDay(db.Model):
     restaurant = relationship('Restaurant', foreign_keys='WorkingDay.restaurant_id')  
 
     work_shifts = db.Column(db.PickleType)  
+
     day = db.Column(db.Integer, db.CheckConstraint('day>=0' and 'day<=6'), nullable=False)  # 0=Mon, 1=Tue, ...
+    # the constraint is on the value of the column
 
 
 # is like a pretty rating implementation

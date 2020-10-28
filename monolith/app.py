@@ -9,7 +9,6 @@ from monolith.auth import login_manager
 import datetime
 import time
 
-
 def create_app():
     app = Flask(__name__)
     app.config['WTF_CSRF_SECRET_KEY'] = 'A SECRET KEY'
@@ -285,9 +284,10 @@ def create_app():
         '''
 
     return app
-
+    
+app = create_app()
 
 if __name__ == '__main__':
-    app = create_app()
+    
     app.run()
 

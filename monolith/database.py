@@ -52,6 +52,9 @@ class User(db.Model):
 
 class Restaurant(db.Model):
     __tablename__ = 'restaurant'
+
+    CUISINE_TYPES = ['cinese','italiana','messicana']
+
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))

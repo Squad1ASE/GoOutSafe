@@ -19,8 +19,12 @@ def create_restaurant():
             if form.validate_on_submit():
                 new_restaurant = Restaurant()
                 form.populate_obj(new_restaurant)
-                new_restaurant.owner = current_user.id
-                new_restaurant.likes = 0
+               
+                new_restaurant.owner_id = current_user.id
+                new_restaurant.likes = 0 
+                new_restaurant.cuisine_type = [Restaurant.CUISINE_TYPES[int(i)-1] for i in form.cuisine_type.data]
+                new_restaurant.prec_measures = form.prec_measures.data
+                
                 db.session.add(new_restaurant)
                 db.session.commit()
                 return redirect('/restaurants')

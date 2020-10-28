@@ -17,7 +17,6 @@ class UserForm(FlaskForm):
     dateofbirth = f.DateField('dateofbirth', format='%d/%m/%Y')
     display = ['email', 'firstname', 'lastname', 'password', 'dateofbirth']
 
-<<<<<<< HEAD
 class RestaurantForm(FlaskForm):
     name = f.StringField('name', validators=[DataRequired()])
     lat = f.StringField('lat', validators=[DataRequired()])
@@ -26,8 +25,6 @@ class RestaurantForm(FlaskForm):
     # maybe owner has to complete the tables descritions and capacity is 
     # automatically derived from tables settings
     # capacity = f.StringField('capacity', validators=[DataRequired()])
-    prec_measures = f.StringField('prec_measures', validators=[DataRequired()])
-    display = ['name', 'lat', 'lon', 'phone', 'prec_measures']
-=======
-
->>>>>>> 5b77a52eafb247b2712c6ca7be98790811125567
+    cuisine_type = f.SelectMultipleField('cuisine_type',choices=[('1','cinese'),('2','italiana'),('3','messicana')],validators=[DataRequired()])
+    prec_measures = f.TextAreaField('prec_measures',validators=[DataRequired()])
+    display = ['name', 'lat', 'lon', 'phone', 'cuisine_type', 'prec_measures']

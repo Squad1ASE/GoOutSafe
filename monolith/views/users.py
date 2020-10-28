@@ -14,15 +14,16 @@ def _users():
 @users.route('/create_user', methods=['GET', 'POST'])
 def create_user():
     form = UserForm()
+    print(request.form)
     if request.method == 'POST':
-        print(form.firstname)
+
         if form.validate_on_submit():
             new_user = User()
             form.populate_obj(new_user)
             new_user.set_password(form.password.data) #pw should be hashed with some salt
             db.session.add(new_user)
             db.session.commit()
-            return redirect('/users')
+            return redirect('/users'), 555
         
 
     return render_template('create_user.html', form=form)

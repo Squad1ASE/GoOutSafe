@@ -52,27 +52,24 @@ class User(db.Model):
 
 class Restaurant(db.Model):
     __tablename__ = 'restaurant'
-
-    CUISINE_TYPES = ['cinese','italiana','messicana']
-
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     owner = relationship('User', foreign_keys='Restaurant.owner_id')
 
-    name = db.Column(db.Text(100))
-    likes = db.Column(db.Integer)  # will store the number of likes, periodically updated in background
-    lat = db.Column(db.Float)  # restaurant latitude
-    lon = db.Column(db.Float)  # restaurant longitude
-    phone = db.Column(db.Integer)
+    name = db.Column(db.Text(100), db.CheckConstraint('length(name)>0'), nullable=False)
+    likes = db.Column(db.Integer, db.CheckConstraint('likes>=0'), default=0)  # will store the number of likes, periodically updated in background
+    lat = db.Column(db.Float, nullable=False)  # restaurant latitude
+    lon = db.Column(db.Float, nullable=False)  # restaurant longitude
+    phone = db.Column(db.Integer, nullable=False) #todo checklen?
 
-    capacity = db.Column(db.Integer)
+    capacity = db.Column(db.Integer, db.CheckConstraint('capacity>0'), nullable=False)
 
-    cuisine_type = db.Column(db.PickleType)
+    cuisine_type = db.Column(db.PickleType, db.CheckConstraint('length(cuisine_type)>0'), nullable=False)
 
-    prec_measures = db.Column(db.Text(200))
-    tot_reviews = db.Column(db.Integer)
-    avg_rating = db.Column(db.Float)
+    prec_measures = db.Column(db.Text(200), db.CheckConstraint('length(prec_measures)>0'), nullable=False)
+    tot_reviews = db.Column(db.Integer, db.CheckConstraint('tot_reviews>=0'), default=0)
+    avg_rating = db.Column(db.Float, db.CheckConstraint('avg_rating>=0' and 'avg_rating<=5'), default=0)
 
 
 

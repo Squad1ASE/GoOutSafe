@@ -13,7 +13,6 @@ class TestUser(unittest.TestCase):
     def test_users(self):
         q = db.session.query(User)
         user = q.first()
-        #print(user.firstname)
 
     def test_login_form(self):
         '''
@@ -26,19 +25,28 @@ class TestUser(unittest.TestCase):
                         dateofbirth='10/10/2000'
                     )
                 )
-        '''
         
-        form = UserForm(email='myemail_test@test.com',
-                        firstname='myfirstname_test',
-                        lastname='mylastname_test',
-                        password='passw',
-                        dateofbirth='10/10/2000')
 
-        reply = tested_app.post('/create_user')
-        print(form)
-        
+        form = UserForm()
+        form.email='myemail_test@test.com',
+        form.firstname='myfirstname_test',
+        form.lastname='mylastname_test',
+        form.password='passw',
+        form.dateofbirth='10/10/2000'
+        #form.populate_obj(user)
+        '''
+
+        form_dict = {
+            'email':'myemail_test@test.com',
+            'firstname':'myfirstname_test',
+            'lastname':'mylastname_test',
+            'password':'passw',
+            'dateofbirth':'10/10/2000'}
+
+        #reply = tested_app.post('/create_user', data=form_dict)
+        reply = tested_app.post('/create_user', data=form_dict)
         #print(reply.status_code)
-        print(reply.data)
-        self.assertEqual(reply, '/users')
+
+        #self.assertEqual(status, 555)
 
     

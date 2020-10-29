@@ -57,7 +57,7 @@ class Restaurant(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     owner = relationship('User', foreign_keys='Restaurant.owner_id')
 
-    name = db.Column(db.Text(100), db.CheckConstraint('length(name)>0'), nullable=False)
+    name = db.Column(db.Text(100), nullable=False)
     likes = db.Column(db.Integer, db.CheckConstraint('likes>=0'), default=0)  # will store the number of likes, periodically updated in background
     lat = db.Column(db.Float, nullable=False)  # restaurant latitude
     lon = db.Column(db.Float, nullable=False)  # restaurant longitude
@@ -65,9 +65,9 @@ class Restaurant(db.Model):
 
     capacity = db.Column(db.Integer, db.CheckConstraint('capacity>0'), nullable=False)
 
-    cuisine_type = db.Column(db.PickleType, db.CheckConstraint('length(cuisine_type)>0'), nullable=False)
+    cuisine_type = db.Column(db.PickleType, nullable=False)
 
-    prec_measures = db.Column(db.Text(200), db.CheckConstraint('length(prec_measures)>0'), nullable=False)
+    prec_measures = db.Column(db.Text(200), nullable=False)
     tot_reviews = db.Column(db.Integer, db.CheckConstraint('tot_reviews>=0'), default=0)
     avg_rating = db.Column(db.Float, db.CheckConstraint('avg_rating>=0' and 'avg_rating<=5'), default=0)
 

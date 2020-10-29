@@ -6,3 +6,4 @@ flask-wtf
 flask-sqlalchemy
 pip-tools
 email_validator
+pytest

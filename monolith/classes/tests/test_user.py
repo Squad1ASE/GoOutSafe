@@ -1,52 +1,54 @@
 import unittest
 from monolith.database import db, User
-from monolith.app import app
-from monolith.forms import UserForm
+from monolith.classes.tests.conftest import test_app
 import datetime
 
-app_ctx = app.app_context()
-app_ctx.push()
-tested_app = app.test_client()
+'''
+def test_create_userr(test_app):
+    tested_app, app = test_app
+    print("SUCCESS")
+'''
+# why test_app doesn't work?
+#class TestUser(unittest.TestCase):
 
-class TestUser(unittest.TestCase):
+    #test_client = app.test_client()
 
-    def test_users(self):
-        q = db.session.query(User)
-        user = q.first()
+'''
+def test_users(self):
+    q = db.session.query(User)
+    user = q.first()
+'''
 
-    def test_login_form(self):
-        '''
-        reply = tested_app.post('/create_user',
-                    data=dict(
-                        email='myemail_test@test.com',
-                        firstname='myfirstname_test',
-                        lastname='mylastname_test',
-                        password='passw',
-                        dateofbirth='10/10/2000'
-                    )
-                )
-        
 
-        form = UserForm()
-        form.email='myemail_test@test.com',
-        form.firstname='myfirstname_test',
-        form.lastname='mylastname_test',
-        form.password='passw',
-        form.dateofbirth='10/10/2000'
-        #form.populate_obj(user)
-        '''
+def test_create_user(test_app):
+    app,test_client = test_app
 
-        form_dict = {
-            'email':'myemail_test@test.com',
-            'firstname':'myfirstname_test',
-            'lastname':'mylastname_test',
-            'password':'passw',
-            'dateofbirth':'10/10/2000'}
+    # --- UNIT TESTS ---
+    with app.app_context():
+        getuser = db.session.query(User).filter(User.email == 'notexistinguser@test.com').first()
+        assert getuser is None
 
-        #reply = tested_app.post('/create_user', data=form_dict)
-        reply = tested_app.post('/create_user', data=form_dict)
-        #print(reply.status_code)
+    # --- COMPONENTS TESTS ---
+    data_dict = dict(
+        email='myemail_test@test.com',
+        firstname='myfirstname_test',
+        lastname='mylastname_test',
+        password='passw',
+        dateofbirth='10/10/2000')
 
-        #self.assertEqual(status, 555)
+    result = test_client.post('/create_user', data=data_dict, follow_redirects=True)
+           
+    assert result.status_code == 200
 
-    
+    # new user creation must fails
+
+    data_dict = dict(
+        email='myemail_test@test.com',
+        firstname='myfirstname_test',
+        lastname='mylastname_test',
+        password='passw',
+        dateofbirth='10/10/2000')
+
+    result = test_client.post('/create_user', data=data_dict, follow_redirects=True)
+
+    assert result.status_code == 403

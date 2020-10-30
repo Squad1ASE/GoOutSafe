@@ -24,7 +24,8 @@ def create_app():
     login_manager.init_app(app)
     db.create_all(app=app)
 
-    # create a first admin user
+    # create a first admin user 
+    # TODO CREATE THE HEALTH AUTHORITY PROFILE
     with app.app_context():
 
         q = db.session.query(User).filter(User.email == 'example@example.com')
@@ -66,6 +67,7 @@ def create_app():
 
             db.session.add(example)
             db.session.commit()
+        
         '''
         q = db.session.query(Restaurant).filter(Restaurant.id == 1)
         restaurant = q.first()

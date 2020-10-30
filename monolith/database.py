@@ -14,8 +14,9 @@ class User(db.Model):
     email = db.Column(db.String, nullable=False, unique=True)  
     @validates('email')
     def validate_email(self, key, user):
-        assert '@' and '.' in user  #min email possible: a@b.c
-        return user
+        if('@' and '.' in user): #min email possible: a@b.c
+            return user
+        raise SyntaxError('Wrong email syntax')
 
     firstname = db.Column(db.Unicode(128))
     lastname = db.Column(db.Unicode(128))
@@ -25,7 +26,6 @@ class User(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)
     is_anonymous = False
-    role = db.Column(db.Unicode(128)) # 0=customer, 1=rest_owner, 2=Asl
 
 
     def __init__(self, *args, **kw):
@@ -136,6 +136,8 @@ class Seat(db.Model):
 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     user= relationship('User', foreign_keys='Seat.user_id')
+
+    guests_email = db.Column(db.Unicode(128))
 
     confirmed = db.Column(db.Boolean, default=True)
 

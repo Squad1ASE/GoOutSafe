@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, request
+from flask import Blueprint, render_template, redirect, request, make_response
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
 
@@ -14,12 +14,17 @@ def login():
         email, password = form.data['email'], form.data['password']
         q = db.session.query(User).filter(User.email == email)
         user = q.first()
-        #print(q.first().id)
+
         if user is not None and user.authenticate(password):
             login_user(user)
             return redirect('/')
-    return render_template('login.html', form=form)
+        else:
+            form.password.errors.append("Invalid credentials.")
+            return make_response(render_template('login.html', form=form), 401)   
 
+    #return render_template('login.html', form=form)
+    # invalid form
+    return make_response(render_template('login.html', form=form), 400)
 
 @auth.route("/logout")
 def logout():

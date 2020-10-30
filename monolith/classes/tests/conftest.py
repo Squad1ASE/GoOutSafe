@@ -18,4 +18,3 @@ def test_app():
     yield app, app.test_client()
 
     os.close(temp_db)
-    

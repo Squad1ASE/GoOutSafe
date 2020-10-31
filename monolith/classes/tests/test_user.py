@@ -34,7 +34,7 @@ def populate_User():
     new_user.firstname = "firstname_test"
     new_user.lastname = "lastname_test"
     new_user.password = "passw"
-    new_user.dateofbirth = datetime.datetime(2020, 10, 5)
+    new_user.dateofbirth = datetime.date(2020, 10, 5)
 
     return new_user
 
@@ -62,7 +62,7 @@ def test_create_user(test_app):
         assert getuser.firstname == "firstname_test"
         assert getuser.lastname == "lastname_test"
         assert getuser.password == "passw"
-        assert getuser.dateofbirth == datetime.datetime(2020, 10, 5)
+        assert getuser.dateofbirth == datetime.date(2020, 10, 5)
         
         # setting a wrong email syntax
         try:
@@ -86,11 +86,9 @@ def test_create_user(test_app):
         
 
     # --- COMPONENTS TESTS ---
-
     assert create_user_EP(test_client, temp_user_example_dict).status_code == 200
 
     # creation of a user with an already existing email must fail
-
     assert create_user_EP(test_client, temp_user_example_dict).status_code ==  403
 
     # creation of a user with wrong email syntax
@@ -154,8 +152,7 @@ def test_logout_user(test_app):
 
     create_user_EP(test_client, temp_user_example_dict)
     
-    # TODO does the unit test even exist?
-    # --- UNIT TESTS ---
+    # --- UNIT TESTS --- nothing to be tested as unit
 
     # --- COMPONENT TESTS ---
     result = user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password'])

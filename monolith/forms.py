@@ -28,3 +28,8 @@ class RestaurantForm(FlaskForm):
     cuisine_type = f.SelectMultipleField('cuisine_type',choices=[('1','cinese'),('2','italiana'),('3','messicana')],validators=[DataRequired()])
     prec_measures = f.TextAreaField('prec_measures',validators=[DataRequired()])
     display = ['name', 'lat', 'lon', 'phone', 'cuisine_type', 'prec_measures']
+
+class GetPatientInformationsForm(FlaskForm):
+    email = f.StringField('email', validators=[DataRequired(), Length(1, 64), Email()])
+    display = ['email']
+

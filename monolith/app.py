@@ -2,19 +2,26 @@ import os
 from flask import Flask
 from monolith.database import db, User, Restaurant, Table, WorkingDay
 from monolith.database import Reservation, Like, Seat, Review, Photo
-from monolith.database import Dishes, ReportOfPositivity, Quarantine
+from monolith.database import Dishes, Quarantine
 from monolith.database import Notification
 from monolith.views import blueprints
 from monolith.auth import login_manager
+from werkzeug.routing import BaseConverter, ValidationError
 import datetime
 import time
 
+
+class UserInformations(BaseConverter):
+    def to_python(self, value):
+        return value
+        
 def create_app():
     app = Flask(__name__)
     app.config['WTF_CSRF_SECRET_KEY'] = 'A SECRET KEY'
     app.config['SECRET_KEY'] = 'ANOTHER ONE'
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gooutsafe.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.url_map.converters['userinformations'] = UserInformations
 
     for bp in blueprints:
         app.register_blueprint(bp)
@@ -24,28 +31,43 @@ def create_app():
     login_manager.init_app(app)
     db.create_all(app=app)
 
-    # create a first admin user 
-    # TODO CREATE THE HEALTH AUTHORITY PROFILE
     with app.app_context():
 
-        q = db.session.query(User).filter(User.email == 'example@example.com')
+        q = db.session.query(User).filter(User.email == 'admin@admin.com')
+        user = q.first()
+        if user is None:
+            # create a first admin user 
+            # test for a user defined in database.db
+            example = User()
+            example.email = 'admin@admin.com'
+            example.firstname = 'Admin'
+            example.lastname = 'Admin'
+            example.set_password('admin')
+            example.dateofbirth = datetime.date(2020, 10, 5)            
+            example.is_admin = True
+            db.session.add(example)
+            db.session.commit()
+
+        q = db.session.query(User).filter(User.email == 'healthauthority@ha.com')
         user = q.first()
         if user is None:
 
             # test for a user defined in database.db
             example = User()
-            example.email = 'example@example.com'
-            example.firstname = 'Admin'
-            example.lastname = 'Admin'
-            example.set_password('admin')
-            example.dateofbirth = datetime.datetime(2020, 10, 5)            
-            example.is_admin = True
+            example.email = 'healthauthority@ha.com'
+            example.firstname = 'Ha'
+            example.lastname = 'Ha'
+            example.set_password('ha')
+            example.dateofbirth = datetime.date(2020, 10, 5)            
+            example.is_admin = False
             db.session.add(example)
             db.session.commit()
 
-        q = db.session.query(User).filter(User.email == 'example@example.com')
-        user = q.first()
 
+        ''' delete this part, this is a restaurant with Admin as the owner
+
+        q = db.session.query(User).filter(User.email == 'admin@admin.com')
+        user = q.first()
         q = db.session.query(Restaurant).filter(Restaurant.id == 1)
         restaurant = q.first()
         if restaurant is None:
@@ -67,7 +89,9 @@ def create_app():
 
             db.session.add(example)
             db.session.commit()
-        
+        '''
+
+
         '''
         q = db.session.query(Restaurant).filter(Restaurant.id == 1)
         restaurant = q.first()
@@ -227,25 +251,6 @@ def create_app():
         print(d.name)
         print(d.ingredients)
 
-
-        q = db.session.query(ReportOfPositivity).filter(ReportOfPositivity.user_id == 1)
-        rop = q.first()
-        if rop is None:
-            example = ReportOfPositivity()
-            example.user_id = user.id
-            example.date = datetime.datetime(2020, 10, 5)            
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(ReportOfPositivity).filter(ReportOfPositivity.user_id == 1)
-        rop = q.first()
-        print(rop)
-        print(rop.user_id)
-        print(rop.date)
-
-
-
         q = db.session.query(Quarantine).filter(Quarantine.user_id == 1)
         quar = q.first()
         if quar is None:
@@ -287,7 +292,7 @@ def create_app():
 
     return app
     
-
+    
 
 if __name__ == '__main__':
     app = create_app()

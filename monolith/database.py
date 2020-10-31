@@ -21,7 +21,7 @@ class User(db.Model):
     firstname = db.Column(db.Unicode(128))
     lastname = db.Column(db.Unicode(128))
     password = db.Column(db.Unicode(128), nullable=False) 
-    dateofbirth = db.Column(db.DateTime)
+    dateofbirth = db.Column(db.Date)
 
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)
@@ -153,7 +153,7 @@ class Review(db.Model):
     marked = db.Column(db.Boolean, default=True)
     rating = db.Column(db.Integer)
     comment = db.Column(db.Unicode(128))
-    date = db.Column(db.DateTime)
+    date = db.Column(db.Date)
 
 
 class Photo(db.Model):
@@ -185,8 +185,8 @@ class Quarantine(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     user = relationship('User', foreign_keys='Quarantine.user_id')
 
-    start_date = db.Column(db.DateTime)
-    end_date = db.Column(db.DateTime)
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
 
     in_observation = db.Column(db.Boolean, default=True) #True=can't book
 
@@ -201,4 +201,3 @@ class Notification(db.Model):
     pending = db.Column(db.Boolean, default=True)
     type_ = db.Column(db.Integer)  # 0=through email, 2=app
     date = db.Column(db.DateTime)
-

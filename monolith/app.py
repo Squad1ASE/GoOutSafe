@@ -1,11 +1,13 @@
 import os
 from flask import Flask
-from monolith.database import db, User, Restaurant, Table, WorkingDay, Reservation, Like, Seat, Review, Photo, Dishes
+from monolith.database import db, User, Restaurant, Table, WorkingDay
+from monolith.database import Reservation, Like, Seat, Review, Photo
+from monolith.database import Dishes, ReportOfPositivity, Quarantine
+from monolith.database import Notification
 from monolith.views import blueprints
 from monolith.auth import login_manager
 import datetime
 import time
-
 
 def create_app():
     app = Flask(__name__)
@@ -22,7 +24,8 @@ def create_app():
     login_manager.init_app(app)
     db.create_all(app=app)
 
-    # create a first admin user
+    # create a first admin user 
+    # TODO CREATE THE HEALTH AUTHORITY PROFILE
     with app.app_context():
 
         q = db.session.query(User).filter(User.email == 'example@example.com')
@@ -64,7 +67,8 @@ def create_app():
 
             db.session.add(example)
             db.session.commit()
-
+        
+        '''
         q = db.session.query(Restaurant).filter(Restaurant.id == 1)
         restaurant = q.first()
         print(restaurant)
@@ -83,12 +87,13 @@ def create_app():
 
             db.session.add(example)
             db.session.commit()
-
+        
         q = db.session.query(Table).filter(Table.id == 1)
         table = q.first()
         print(table)
         print(table.name)
         print(table.restaurant_id)
+        
 
 
         q = db.session.query(WorkingDay).filter(WorkingDay.id == 1)
@@ -223,7 +228,65 @@ def create_app():
         print(d.ingredients)
 
 
+        q = db.session.query(ReportOfPositivity).filter(ReportOfPositivity.user_id == 1)
+        rop = q.first()
+        if rop is None:
+            example = ReportOfPositivity()
+            example.user_id = user.id
+            example.date = datetime.datetime(2020, 10, 5)            
+
+            db.session.add(example)
+            db.session.commit()
+
+        q = db.session.query(ReportOfPositivity).filter(ReportOfPositivity.user_id == 1)
+        rop = q.first()
+        print(rop)
+        print(rop.user_id)
+        print(rop.date)
+
+
+
+        q = db.session.query(Quarantine).filter(Quarantine.user_id == 1)
+        quar = q.first()
+        if quar is None:
+            example = Quarantine()
+            example.user_id = user.id
+            example.start_date = datetime.datetime(2020, 10, 5)            
+            example.end_date = datetime.datetime(2020, 10, 6)            
+            example.active = False
+
+            db.session.add(example)
+            db.session.commit()
+
+        q = db.session.query(Quarantine).filter(Quarantine.user_id == 1)
+        quar = q.first()
+        print(quar)
+        print(quar.user_id)
+        print(quar.active)
+
+
+        q = db.session.query(Notification).filter(Notification.user_id == 1)
+        note = q.first()
+        if note is None:
+            example = Notification()
+            example.user_id = user.id
+            example.message = 'You are infected'
+            example.pending = True
+            example.type_ = 0
+            example.date = datetime.datetime(2020, 10, 5)            
+
+            db.session.add(example)
+            db.session.commit()
+
+        q = db.session.query(Notification).filter(Notification.user_id == 1)
+        note = q.first()
+        print(note)
+        print(note.user_id)
+        print(note.message)
+        '''
+
     return app
+    
 
 
 if __name__ == '__main__':

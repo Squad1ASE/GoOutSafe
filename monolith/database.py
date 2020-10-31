@@ -1,30 +1,32 @@
 from werkzeug.security import generate_password_hash, check_password_hash
-import enum
-
-# is Object map scheme
-from sqlalchemy.orm import relationship
-import datetime as dt
+from sqlalchemy.orm import relationship, validates  # is Object map scheme
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.schema import CheckConstraint
 
 db = SQLAlchemy()
 
 
-# the following consist of tables inside the db
-# tables are defined using model
+# the following consist of tables inside the db tables are defined using model
 class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
-    email = db.Column(db.Unicode(128), nullable=False, unique=True)
+    email = db.Column(db.String, nullable=False, unique=True)  
+    @validates('email')
+    def validate_email(self, key, user):
+        if('@' and '.' in user): #min email possible: a@b.c
+            return user
+        raise SyntaxError('Wrong email syntax')
+
     firstname = db.Column(db.Unicode(128))
     lastname = db.Column(db.Unicode(128))
     password = db.Column(db.Unicode(128), nullable=False) 
     dateofbirth = db.Column(db.DateTime)
+
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)
     is_anonymous = False
-    role = db.Column(db.Unicode(128)) # 0=customer, 1=rest_owner, 2=Asl
+
 
     def __init__(self, *args, **kw):
         super(User, self).__init__(*args, **kw)
@@ -48,27 +50,26 @@ class User(db.Model):
 
 
 
-
 class Restaurant(db.Model):
     __tablename__ = 'restaurant'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     owner = relationship('User', foreign_keys='Restaurant.owner_id')
 
-    name = db.Column(db.Text(100))
-    likes = db.Column(db.Integer)  # will store the number of likes, periodically updated in background
-    lat = db.Column(db.Float)  # restaurant latitude
-    lon = db.Column(db.Float)  # restaurant longitude
-    phone = db.Column(db.Integer)
+    name = db.Column(db.Text(100), nullable=False)
+    likes = db.Column(db.Integer, db.CheckConstraint('likes>=0'), default=0)  # will store the number of likes, periodically updated in background
+    lat = db.Column(db.Float, nullable=False)  # restaurant latitude
+    lon = db.Column(db.Float, nullable=False)  # restaurant longitude
+    phone = db.Column(db.Integer, nullable=False) #todo checklen?
 
-    capacity = db.Column(db.Integer)
+    capacity = db.Column(db.Integer, db.CheckConstraint('capacity>0'), nullable=False)
 
-    cuisine_type = db.Column(db.PickleType)
+    cuisine_type = db.Column(db.PickleType, nullable=False)
 
-    prec_measures = db.Column(db.Text(200))
-    tot_reviews = db.Column(db.Integer)
-    avg_rating = db.Column(db.Float)
+    prec_measures = db.Column(db.Text(200), nullable=False)
+    tot_reviews = db.Column(db.Integer, db.CheckConstraint('tot_reviews>=0'), default=0)
+    avg_rating = db.Column(db.Float, db.CheckConstraint('avg_rating>=0' and 'avg_rating<=5'), default=0)
 
 
 
@@ -91,7 +92,9 @@ class WorkingDay(db.Model):
     restaurant = relationship('Restaurant', foreign_keys='WorkingDay.restaurant_id')  
 
     work_shifts = db.Column(db.PickleType)  
+
     day = db.Column(db.Integer, db.CheckConstraint('day>=0' and 'day<=6'), nullable=False)  # 0=Mon, 1=Tue, ...
+    # the constraint is on the value of the column
 
 
 # is like a pretty rating implementation
@@ -134,6 +137,8 @@ class Seat(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     user= relationship('User', foreign_keys='Seat.user_id')
 
+    guests_email = db.Column(db.Unicode(128))
+
     confirmed = db.Column(db.Boolean, default=True)
 
 
@@ -174,3 +179,36 @@ class Dishes(db.Model):
     ingredients = db.Column(db.PickleType)
 
 
+class ReportOfPositivity(db.Model):
+    __tablename__  = 'report_of_positivity'
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    user = relationship('User', foreign_keys='ReportOfPositivity.user_id')
+
+    date = db.Column(db.DateTime)
+
+
+class Quarantine(db.Model):
+    __tablename__ = 'quarantine'
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    user = relationship('User', foreign_keys='Quarantine.user_id')
+
+    start_date = db.Column(db.DateTime)
+    end_date = db.Column(db.DateTime)
+
+    active = db.Column(db.Boolean, default=True)
+
+
+class Notification(db.Model):
+    __tablename__ = 'notification'
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    user = relationship('User', foreign_keys='Notification.user_id')
+
+    message = db.Column(db.Unicode(128))
+    pending = db.Column(db.Boolean, default=True)
+    type_ = db.Column(db.Integer)  # 0=through email, 1=phone, 2=app
+    date = db.Column(db.DateTime)
+
+#comment

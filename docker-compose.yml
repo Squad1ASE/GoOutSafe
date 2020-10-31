@@ -1,0 +1,9 @@
+web:
+  build: .
+  dockerfile: Dockerfile
+  environment: 
+    - FLASK_RUN_HOST=0.0.0.0
+    - FLASK_APP=monolith/app.py
+  ports:
+    - "5000:5000"
+  command: flask run

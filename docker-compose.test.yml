@@ -1,0 +1,8 @@
+web:
+  build: .
+  dockerfile: Dockerfile
+  environment: 
+    - PYTHONPATH=./
+  ports:
+    - "5000:5000"
+  command: pytest monolith/classes/tests/

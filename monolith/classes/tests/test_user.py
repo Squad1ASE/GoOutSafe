@@ -89,12 +89,12 @@ def test_create_user(test_app):
            
     assert result.status_code == 200
 
-    # create a new user
+    # creation of a user with an already existing email must fail
     result = test_client.post('/create_user', data=data_dict, follow_redirects=True)
 
     assert result.status_code == 403
 
-    # creation of a user with an already existing email must fail
+    # creation of a user with wrong email syntax
     data_dict['email'] = 'newuserwrongemail'
     result = test_client.post('/create_user', data=data_dict, follow_redirects=True)
 
@@ -109,21 +109,73 @@ def test_create_user(test_app):
 def test_login_user(test_app):
     app,test_client = test_app
 
-    '''
-    with app.app_context():
-        new_user = User()
-        new_user.email = "newtestinguser@test.com"
-        new_user.firstname = "firstname_test"
-        new_user.lastname = "lastname_test"
-        new_user.set_password("passw")
-        new_user.dateofbirth = datetime.datetime(2020, 10, 5)
+    data_dict = dict(
+        email='newtestinguser@test.com',
+        firstname='firstname_test',
+        lastname='lastname_test',
+        password='passw',
+        dateofbirth='05/10/2000')
 
-        db.session.add(new_user)
-        db.session.commit()
-    '''
+    test_client.post('/create_user', data=data_dict, follow_redirects=True)
     
     # --- UNIT TESTS ---
+    with app.app_context():
+
+        # authentication with correct credentials
+        getuser = db.session.query(User).filter(User.email == data_dict['email']).first()
+        
+        assert getuser is not None
+        assert getuser.authenticate(data_dict['password']) == True
+
+        # authentication with wrong email
+        getuser = db.session.query(User).filter(User.email == "wrongemail@test.com").first()
+        
+        assert getuser is None
+
+        # authentication with correct email and wrong password
+        getuser = db.session.query(User).filter(User.email == data_dict['email']).first()
+        
+        assert getuser is not None
+        assert getuser.authenticate("wrngpass") == False
+
     # --- COMPONENT TESTS ---
+    # authentication with wrong email
+    result = test_client.post('/login', data=dict(email = "wrongemail@test.com",
+                                                    password = data_dict['password']), 
+                                                    follow_redirects=True)
+           
+    assert result.status_code == 401
+
+    # authentication with correct email and wrong password
+    result = test_client.post('/login', data=dict(email = data_dict['email'],
+                                                    password = "wrngpass"), 
+                                                    follow_redirects=True)
+           
+    assert result.status_code == 401
+
+    # authentication with wrong email syntax
+    result = test_client.post('/login', data=dict(email = "wrongemailsyntax",
+                                                    password = data_dict['password']), 
+                                                    follow_redirects=True)
+           
+    assert result.status_code == 400
+
+    # authentication with correct credentials   
+    result = test_client.post('/login', data=dict(email = data_dict['email'],
+                                                    password = data_dict['password']), 
+                                                    follow_redirects=True)
+           
+    assert result.status_code == 200
+
+
+    # creation of a new user when already logged in must fail
+    data_dict['email'] = 'newtestinguser2@test.com'
+    result = test_client.post('/create_user', data=data_dict, follow_redirects=True)
+
+    assert result.status_code == 403
+
+def test_logout_user(test_app):
+    app,test_client = test_app
 
     data_dict = dict(
         email='newtestinguser@test.com',
@@ -133,13 +185,19 @@ def test_login_user(test_app):
         dateofbirth='05/10/2000')
 
     test_client.post('/create_user', data=data_dict, follow_redirects=True)
-           
+    
+    # TODO does the unit test even exist?
+    # --- UNIT TESTS ---
 
-        
-    data_dict = dict(
-        email='newtestinguser@test.com',
-        password='passw')
+    # --- COMPONENT TESTS ---
 
-    result = test_client.post('/login', data=data_dict, follow_redirects=True)
-           
+    result = test_client.post('/login', data=dict(email = data_dict['email'],
+                                                    password = data_dict['password']), 
+                                                    follow_redirects=True)
+
     assert result.status_code == 200
+    # logout 
+    result = test_client.get('/logout', follow_redirects=True)
+
+    assert result.status_code == 200
+    

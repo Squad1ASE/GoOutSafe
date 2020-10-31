@@ -14,7 +14,7 @@ def login():
         email, password = form.data['email'], form.data['password']
         q = db.session.query(User).filter(User.email == email)
         user = q.first()
-
+        
         if user is not None and user.authenticate(password):
             login_user(user)
             return redirect('/')
@@ -27,6 +27,7 @@ def login():
     return make_response(render_template('login.html', form=form), 400)
 
 @auth.route("/logout")
+@login_required
 def logout():
     logout_user()
     return redirect('/')

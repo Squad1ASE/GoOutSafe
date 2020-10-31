@@ -30,7 +30,7 @@ def create_user():
             if(check_already_register is not None):
                 # already registered
                 return render_template('create_user.html', form=form), 403
-
+                
             new_user.set_password(form.password.data) #pw should be hashed with some salt
             # database check
             try:

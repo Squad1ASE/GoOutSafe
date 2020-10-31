@@ -2,6 +2,7 @@ from monolith.database import db, User, Quarantine
 from monolith.classes.tests.conftest import test_app
 import datetime
 from sqlalchemy import exc
+from flask import url_for
 
 
 user_example_credentials = dict(
@@ -22,6 +23,10 @@ def user_login_EP(test_client, email, password):
                             data=dict(email=email,
                                     password=password),
                             follow_redirects=True)
+
+def get_patient_informations(test_client, email):
+    return test_client.post('/patient_informations',
+                            data=dict(email=email), follow_redirects=True)
 
 
 def populate_User():
@@ -77,6 +82,16 @@ def test_mark_positive(test_app):
         assert getquarantinenewstatus.in_observation == False
 
     # --- COMPONENTS TESTS ---
-    user_login_EP(test_client, "healthauthority@ha.com", "ha")
-    getuser =  test_client.post('/mark_positive', data=user_example_credentials, follow_redirects=True)
 
+    user_login_EP(test_client, "userexample@test.com", "passw")
+
+    #Try to get informations with a user that is not the health authority
+    assert(get_patient_informations(test_client, "userexample@test.com").status_code == 403)
+
+    user_login_EP(test_client, "healthauthority@ha.com", "ha")
+    #getuser =  test_client.post('/mark_positive', data=user_example_credentials, follow_redirects=True)
+    
+    assert(get_patient_informations(test_client, temp_user_example_dict['email']).status_code == 200)
+
+    #Try to get informations of a user that doesn't exist
+    assert(get_patient_informations(test_client, 'userexample2@test.com').status_code == 404)

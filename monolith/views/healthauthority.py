@@ -1,7 +1,7 @@
 from flask import Blueprint, redirect, render_template, request, make_response, url_for
-from monolith.database import db, User
+from monolith.database import db, User, Quarantine
 from monolith.auth import admin_required
-from monolith.forms import GetPatientInformationsForm
+from monolith.forms import GetPatientInformationsForm, MarkPositiveForm
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
 
@@ -10,19 +10,31 @@ healthauthority = Blueprint('healthauthority', __name__)
 @healthauthority.route('/mark_patient', methods=['GET','POST'])
 @login_required
 def mark_patient():
-    if(current_user.email != "healthauthority@ha.com"):
-        return make_response(render_template('error.html', message="Access denied!", redirect_url="/"), 403)
 
+    if(current_user.email != "healthauthority@ha.com"):
+       return make_response(render_template('error.html', message="Access denied!", redirect_url="/"), 403)
+
+    if request.args.get("email") == None or request.args.get("firstname") == None or request.args.get("lastname") == None or request.args.get("dateofbirth") == None or request.args.get("id") == None:
+       return make_response(render_template('error.html', message="User doesn't exists!", redirect_url="/"), 404)
+
+    form = MarkPositiveForm()
     if request.method == 'POST':
 
         if request.form['mark_positive_button'] == 'mark_positive':
+            quarantine = Quarantine()
+            form.populate_obj(quarantine)
+            quarantine.user_id = request.args.get('id')
+            db.session.add(quarantine)
+            db.session.commit()
+            return redirect('/')
 
 
     return render_template('patient_informations.html', 
                                                         email=request.args.get("email"),
                                                         firstname=request.args.get("firstname"),
                                                         lastname=request.args.get("lastname"),
-                                                        dateofbirth=request.args.get("dateofbirth")
+                                                        dateofbirth=request.args.get("dateofbirth"),
+                                                        form=form
                                                         )
 
 
@@ -53,7 +65,8 @@ def get_patient_informations():
                                         email=getuser.email,
                                         firstname=getuser.firstname,
                                         lastname=getuser.lastname,
-                                        dateofbirth=getuser.dateofbirth))
+                                        dateofbirth=getuser.dateofbirth,
+                                        id=getuser.id))
                 #return redirect('/mark_patient',user=getuser)
 
 

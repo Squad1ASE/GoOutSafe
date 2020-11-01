@@ -19,7 +19,7 @@ def user_login_EP(test_client, email, password):
 
 def test_mark_positive(test_app):
     app, test_client = test_app
-    '''
+    
     temp_user_example_dict = user_example_credentials
 
     # --- UNIT TESTS ---
@@ -55,13 +55,12 @@ def test_mark_positive(test_app):
 
         getquarantinenewstatus = db.session.query(Quarantine).filter(Quarantine.user_id == getuser.id).first()
         assert getquarantinenewstatus.in_observation == False
-    '''
+    
     # --- COMPONENTS TESTS ---
     # access to patient information is forbidden for customers
     user_login_EP(test_client, user_example_credentials['email'], user_example_credentials['password'])
 
     result = test_client.get('/patient_informations', follow_redirects=True)
-
     assert result.status_code == 403
 
     test_client.get('/logout', follow_redirects=True)
@@ -70,21 +69,21 @@ def test_mark_positive(test_app):
     user_login_EP(test_client, "healthauthority@ha.com", "ha")
 
     result = test_client.get('/patient_informations', follow_redirects=True)
-
     assert result.status_code == 200
 
     # wrong email must return patient not found
     result = test_client.post('/patient_informations', data=dict(email="wrongemail@test.com"), follow_redirects=True)
-
     assert result.status_code == 404
     
     # correct email must returns the patient informations 
     result = test_client.post('/patient_informations', data=dict(email=user_example_credentials['email']), follow_redirects=True)
-
     assert result.status_code == 200
 
-    #result = test_client.post('/patient_informations?email=userexampletest%40test.com', data=dict(mark_positive_button='mark_positive'), follow_redirects=True)
-    result = test_client.post('/patient_informations', data=dict(email=user_example_credentials['email'],mark_positive_button='mark_positive'), follow_redirects=True)
-
+    # patient is marked as positive 
+    result = test_client.post('/patient_informations?email=userexampletest%40test.com', data=dict(mark_positive_button='mark_positive'), follow_redirects=True)
     assert result.status_code == 555
+
+    # go to the previous page when patient is already marked as positive
+    result = test_client.get('/patient_informations?email=userexampletest%40test.com', data=dict(mark_positive_button='mark_positive'), follow_redirects=True)
+    assert result.status_code == 200
     

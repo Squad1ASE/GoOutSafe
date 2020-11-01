@@ -56,7 +56,7 @@ def get_patient_informations():
 
         #if request.form['mark_positive_button'] == 'mark_positive' and getuserquarantine_status is None:
         if request.form['mark_positive_button'] == 'mark_positive':
-            print("MARKING")
+
             getuser = db.session.query(User).filter(User.email == request.args.get("email")).first()
 
             startdate = datetime.date.today()
@@ -75,11 +75,11 @@ def get_patient_informations():
             return make_response(render_template('error.html', message="Patient marked as positive", redirect_url="/"), 555)     
 
         if request.form['go_back'] == 'go_back':
-            return redirect('/patient_informations', value="")
+            print("goback")
+            return redirect('/patient_informations')
 
 
     if 'email' in request.args:
-
         getuser = db.session.query(User).filter(User.email == request.args.get("email")).first()
         getuserquarantine_status = db.session.query(Quarantine).filter(Quarantine.user_id == getuser.id and Quarantine.in_observation == True).first()
         

@@ -2,21 +2,14 @@ from monolith.database import db, User, Quarantine
 from monolith.classes.tests.conftest import test_app
 import datetime
 from sqlalchemy import exc
-from flask import url_for
 
 
 user_example_credentials = dict(
-        email='userexample@test.com',
+        email='userexampletest@test.com',
         firstname='firstname_test',
         lastname='lastname_test',
         password='passw',
         dateofbirth='05/10/2000')
-
-
-def create_user_EP(test_client, data_dict):
-    return test_client.post('/create_user',
-                            data=data_dict, follow_redirects=True)
-
 
 def user_login_EP(test_client, email, password):
     return test_client.post('/login',
@@ -24,28 +17,10 @@ def user_login_EP(test_client, email, password):
                                     password=password),
                             follow_redirects=True)
 
-def get_patient_informations(test_client, email):
-    return test_client.post('/patient_informations',
-                            data=dict(email=email), follow_redirects=True)
-
-
-def populate_User():
-    new_user = User()
-    new_user.email = "newtestinguser@test.com"
-    new_user.firstname = "firstname_test"
-    new_user.lastname = "lastname_test"
-    new_user.password = "passw"
-    new_user.dateofbirth = datetime.datetime(2020, 10, 5)
-
-    return new_user
-
-
 def test_mark_positive(test_app):
     app, test_client = test_app
-
+    '''
     temp_user_example_dict = user_example_credentials
-
-    create_user_EP(test_client, temp_user_example_dict)
 
     # --- UNIT TESTS ---
     with app.app_context():
@@ -80,18 +55,36 @@ def test_mark_positive(test_app):
 
         getquarantinenewstatus = db.session.query(Quarantine).filter(Quarantine.user_id == getuser.id).first()
         assert getquarantinenewstatus.in_observation == False
-
+    '''
     # --- COMPONENTS TESTS ---
+    # access to patient information is forbidden for customers
+    user_login_EP(test_client, user_example_credentials['email'], user_example_credentials['password'])
 
-    user_login_EP(test_client, "userexample@test.com", "passw")
+    result = test_client.get('/patient_informations', follow_redirects=True)
 
-    #Try to get informations with a user that is not the health authority
-    assert(get_patient_informations(test_client, "userexample@test.com").status_code == 403)
+    assert result.status_code == 403
 
+    test_client.get('/logout', follow_redirects=True)
+
+    # access to health authority is allowed
     user_login_EP(test_client, "healthauthority@ha.com", "ha")
-    #getuser =  test_client.post('/mark_positive', data=user_example_credentials, follow_redirects=True)
-    
-    assert(get_patient_informations(test_client, temp_user_example_dict['email']).status_code == 200)
 
-    #Try to get informations of a user that doesn't exist
-    assert(get_patient_informations(test_client, 'userexample2@test.com').status_code == 404)
+    result = test_client.get('/patient_informations', follow_redirects=True)
+
+    assert result.status_code == 200
+
+    # wrong email must return patient not found
+    result = test_client.post('/patient_informations', data=dict(email="wrongemail@test.com"), follow_redirects=True)
+
+    assert result.status_code == 404
+    
+    # correct email must returns the patient informations 
+    result = test_client.post('/patient_informations', data=dict(email=user_example_credentials['email']), follow_redirects=True)
+
+    assert result.status_code == 200
+
+    #result = test_client.post('/patient_informations?email=userexampletest%40test.com', data=dict(mark_positive_button='mark_positive'), follow_redirects=True)
+    result = test_client.post('/patient_informations', data=dict(email=user_example_credentials['email'],mark_positive_button='mark_positive'), follow_redirects=True)
+
+    assert result.status_code == 555
+    

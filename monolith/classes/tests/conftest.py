@@ -31,6 +31,21 @@ def test_app():
             example.is_admin = False
             db.session.add(example)
             db.session.commit()
+            
+        q = db.session.query(User).filter(User.email == 'userexampletest@test.com')
+        user = q.first()
+        if user is None:
+
+            # test for a user defined in database.db
+            example = User()
+            example.email = 'userexampletest@test.com'
+            example.firstname = 'firstname_test'
+            example.lastname = 'lastname_test'
+            example.set_password('passw')
+            example.dateofbirth = datetime.date(2020, 10, 5)            
+            example.is_admin = False
+            db.session.add(example)
+            db.session.commit()
 
     yield app, app.test_client()
 

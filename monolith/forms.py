@@ -32,9 +32,4 @@ class RestaurantForm(FlaskForm):
 class GetPatientInformationsForm(FlaskForm):
     email = f.StringField('email', validators=[DataRequired(), Length(1, 64), Email()])
     display = ['email']
-    
-class MarkPositiveForm(FlaskForm):
-    start_date = f.DateField('start_date', format='%d/%m/%Y')
-    end_date = f.DateField('end_date', format='%d/%m/%Y')
-    display = ['start_date', 'end_date']
 

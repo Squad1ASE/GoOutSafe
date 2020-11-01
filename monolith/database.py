@@ -182,7 +182,9 @@ class Dishes(db.Model):
 class Quarantine(db.Model):
     __tablename__ = 'quarantine'
 
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     user = relationship('User', foreign_keys='Quarantine.user_id')
 
     start_date = db.Column(db.Date)

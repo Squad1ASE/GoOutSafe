@@ -6,14 +6,9 @@ from monolith.database import Dishes, Quarantine
 from monolith.database import Notification
 from monolith.views import blueprints
 from monolith.auth import login_manager
-from werkzeug.routing import BaseConverter, ValidationError
 import datetime
 import time
 
-
-class UserInformations(BaseConverter):
-    def to_python(self, value):
-        return value
         
 def create_app():
     app = Flask(__name__)
@@ -21,7 +16,6 @@ def create_app():
     app.config['SECRET_KEY'] = 'ANOTHER ONE'
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gooutsafe.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.url_map.converters['userinformations'] = UserInformations
 
     for bp in blueprints:
         app.register_blueprint(bp)
@@ -58,6 +52,21 @@ def create_app():
             example.firstname = 'Ha'
             example.lastname = 'Ha'
             example.set_password('ha')
+            example.dateofbirth = datetime.date(2020, 10, 5)            
+            example.is_admin = False
+            db.session.add(example)
+            db.session.commit()
+
+        q = db.session.query(User).filter(User.email == 'test@test.com')
+        user = q.first()
+        if user is None:
+
+            # test for a user defined in database.db
+            example = User()
+            example.email = 'test@test.com'
+            example.firstname = 'Testfirstname'
+            example.lastname = 'Testlastname'
+            example.set_password('test')
             example.dateofbirth = datetime.date(2020, 10, 5)            
             example.is_admin = False
             db.session.add(example)

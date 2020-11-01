@@ -1,6 +1,8 @@
 from flask_wtf import FlaskForm
 import wtforms as f
-from wtforms.validators import DataRequired, Length, Email
+from wtforms import Form
+from wtforms.validators import DataRequired, Length, Email, NumberRange
+from monolith.database import Restaurant
 
 
 class LoginForm(FlaskForm):
@@ -16,20 +18,47 @@ class UserForm(FlaskForm):
     password = f.PasswordField('password', validators=[DataRequired(), Length(1,8)])
     dateofbirth = f.DateField('dateofbirth', format='%d/%m/%Y')
     display = ['email', 'firstname', 'lastname', 'password', 'dateofbirth']
+    
+
+class DishForm(Form):
+    """Subform.
+
+    CSRF is disabled for this subform (using `Form` as parent class) because
+    it is never used by itself.
+    """
+    dish_name = f.StringField('Name', validators=[DataRequired()])
+    price = f.FloatField('Price', validators=[DataRequired()])
+    ingredients = f.StringField('Ingredients', validators=[DataRequired()])
+
+
+class TableForm(Form):
+    """Subform.
+
+    CSRF is disabled for this subform (using `Form` as parent class) because
+    it is never used by itself.
+    """
+    table_name = f.StringField('Name', validators=[DataRequired()])
+    capacity = f.IntegerField('Capacity', validators=[DataRequired(), NumberRange(min=1)])
+
 
 class RestaurantForm(FlaskForm):
-    name = f.StringField('name', validators=[DataRequired()])
-    lat = f.StringField('lat', validators=[DataRequired()])
-    lon = f.StringField('lon', validators=[DataRequired()])
-    phone = f.StringField('phone', validators=[DataRequired()])
-    # maybe owner has to complete the tables descritions and capacity is 
-    # automatically derived from tables settings
-    # capacity = f.StringField('capacity', validators=[DataRequired()])
-    cuisine_type = f.SelectMultipleField('cuisine_type',choices=[('1','cinese'),('2','italiana'),('3','messicana')],validators=[DataRequired()])
-    prec_measures = f.TextAreaField('prec_measures',validators=[DataRequired()])
-    display = ['name', 'lat', 'lon', 'phone', 'cuisine_type', 'prec_measures']
+    name = f.StringField('Name', validators=[DataRequired()])
+    lat = f.FloatField('Latitude', validators=[DataRequired()])
+    lon = f.FloatField('Longitude', validators=[DataRequired()])
+    phone = f.IntegerField('Phone', validators=[DataRequired()])
 
-class GetPatientInformationsForm(FlaskForm):
-    email = f.StringField('email', validators=[DataRequired(), Length(1, 64), Email()])
-    display = ['email']
+    # Note: the capacity is automatically derived from tables settings
 
+    cuisine_type = f.SelectMultipleField(
+        'Cuisine types', 
+        choices = Restaurant.CUISINE_TYPES.choices(),
+        coerce = Restaurant.CUISINE_TYPES.coerce, 
+        validators=[DataRequired()]
+    )
+    prec_measures = f.TextAreaField('Precautionary measures',validators=[DataRequired()])
+    avg_time_of_stay = f.IntegerField('Average time of stay (in minutes)', validators=[DataRequired(), NumberRange(min=15)])
+
+    tables = f.FieldList(f.FormField(TableForm), min_entries=1, max_entries=100)
+    dishes = f.FieldList(f.FormField(DishForm), min_entries=1, max_entries=100)
+
+    display = ['name', 'lat', 'lon', 'phone', 'cuisine_type', 'prec_measures', 'avg_time_of_stay']

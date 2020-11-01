@@ -2,8 +2,25 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.orm import relationship, validates  # is Object map scheme
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.schema import CheckConstraint
+from enum import Enum
 
 db = SQLAlchemy()
+
+
+# class that the enums used in the underlying classes 
+# should inherit to facilitate their management in forms
+class FormEnum(Enum):
+    @classmethod
+    def choices(cls):
+        return [(choice, choice.name) for choice in cls]
+
+    @classmethod
+    def coerce(cls, item):
+        return cls(int(item)) if not isinstance(item, cls) else item
+
+    def __str__(self):
+        return str(self.value)
+
 
 
 # the following consist of tables inside the db tables are defined using model
@@ -48,28 +65,38 @@ class User(db.Model):
         return self.id
 
 
-
 class Restaurant(db.Model):
     __tablename__ = 'restaurant'
+
+    class CUISINE_TYPES(FormEnum):
+        italiana = 1
+        cinese = 2
+        messicana = 3
+        giapponese = 4
+        fast_food = 5
+        pizzeria = 6
+
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     owner = relationship('User', foreign_keys='Restaurant.owner_id')
 
     name = db.Column(db.Unicode(128), nullable=False)
-    likes = db.Column(db.Integer, db.CheckConstraint('likes>=0'), default=0)  # will store the number of likes, periodically updated in background
     lat = db.Column(db.Float, nullable=False)  # restaurant latitude
     lon = db.Column(db.Float, nullable=False)  # restaurant longitude
-    phone = db.Column(db.Integer, nullable=False) #todo checklen?
+    phone = db.Column(db.Integer, nullable=False) #TODO checklen?
 
     capacity = db.Column(db.Integer, db.CheckConstraint('capacity>0'), nullable=False)
+    prec_measures = db.Column(db.Unicode(128), nullable=False)
 
     cuisine_type = db.Column(db.PickleType, nullable=False)
 
-    prec_measures = db.Column(db.Unicode(128), nullable=False)
-    tot_reviews = db.Column(db.Integer, db.CheckConstraint('tot_reviews>=0'), default=0)
+    # average time to eat, expressed in minutes 
+    avg_time_of_stay = db.Column(db.Integer, db.CheckConstraint('avg_time_of_stay>=15'), nullable=False)
+
+    tot_reviews = db.Column(db.Integer, db.CheckConstraint('tot_reviews>=0'), default=0)   # periodically updated in background
     avg_rating = db.Column(db.Float, db.CheckConstraint('avg_rating>=0' and 'avg_rating<=5'), default=0)
-    avg_time_of_stay = db.Column(db.Float, db.CheckConstraint('avg_time_of_stay>=0' and 'avg_time_of_stay<=5'), default=0)
+    likes = db.Column(db.Integer, db.CheckConstraint('likes>=0'), default=0)    # periodically updated in background
 
 
 class Table(db.Model):
@@ -79,8 +106,8 @@ class Table(db.Model):
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'))
     restaurant = relationship('Restaurant', foreign_keys='Table.restaurant_id') 
 
-    name = db.Column(db.Unicode(128))    
-    capacity = db.Column(db.Integer, db.CheckConstraint('capacity>=0'))  # avoid neg numbers
+    table_name = db.Column(db.Unicode(128), nullable=False)   
+    capacity = db.Column(db.Integer, db.CheckConstraint('capacity>0'), nullable=False)
 
 
 class WorkingDay(db.Model):
@@ -94,7 +121,6 @@ class WorkingDay(db.Model):
 
     day = db.Column(db.Integer, db.CheckConstraint('day>=0' and 'day<=6'), nullable=False)  # 0=Mon, 1=Tue, ...
     # the constraint is on the value of the column
-
 
 
 # is like a pretty rating implementation
@@ -128,7 +154,6 @@ class Reservation(db.Model):
     cancelled = db.Column(db.Boolean, default=True)
 
 
-
 class Seat(db.Model):
     __tablename__ = 'seat'
 
@@ -138,7 +163,6 @@ class Seat(db.Model):
     guests_email = db.Column(db.String, nullable=False, unique=True)  
 
     confirmed = db.Column(db.Boolean, default=True)
-
 
 
 class Review(db.Model):
@@ -167,16 +191,16 @@ class Photo(db.Model):
     description = db.Column(db.Unicode(128))
 
 
-class Dishes(db.Model):
+class Dish(db.Model):
     __tablename__ = 'dishes'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'))
-    restaurant = relationship('Restaurant', foreign_keys='Dishes.restaurant_id')
+    restaurant = relationship('Restaurant', foreign_keys='Dish.restaurant_id')
 
-    price = db.Column(db.Float)
-    name = db.Column(db.Unicode(128))
-    ingredients = db.Column(db.PickleType)
+    dish_name = db.Column(db.Unicode(128), nullable=False)
+    price = db.Column(db.Float, db.CheckConstraint('price>=0'), nullable=False)
+    ingredients = db.Column(db.PickleType, nullable=False)
 
 
 class Quarantine(db.Model):

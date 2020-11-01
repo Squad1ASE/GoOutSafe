@@ -2,7 +2,7 @@ import os
 from flask import Flask
 from monolith.database import db, User, Restaurant, Table, WorkingDay
 from monolith.database import Reservation, Like, Seat, Review, Photo
-from monolith.database import Dishes, Quarantine
+from monolith.database import Dish, Quarantine
 from monolith.database import Notification
 from monolith.views import blueprints
 from monolith.auth import login_manager
@@ -92,9 +92,10 @@ def create_app():
 
             example.capacity = 30
             example.cuisine_type= ['ciao','pippo']
-            example.prec_measures = ''
+            example.prec_measures = 'leggeX'
             example.tot_reviews = 2
             example.avg_rating = 2.0
+            example.avg_time_of_stay = 15
 
             db.session.add(example)
             db.session.commit()

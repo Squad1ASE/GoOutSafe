@@ -9,6 +9,9 @@ auth = Blueprint('auth', __name__)
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user is not None and hasattr(current_user, 'id'):
+        return redirect('/')
+        
     form = LoginForm()
     if form.validate_on_submit():
         email, password = form.data['email'], form.data['password']

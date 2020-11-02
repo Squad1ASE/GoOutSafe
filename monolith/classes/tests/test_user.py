@@ -1,34 +1,10 @@
 from monolith.database import db, User
-from monolith.classes.tests.conftest import test_app
+from monolith.classes.tests.conftest import test_app, create_user_EP, user_login_EP, user_example
 import datetime
 from sqlalchemy import exc
 
-# why test_app doesn't work?
-#class TestUser(unittest.TestCase):
 
-    #test_client = app.test_client()
-    
-user_example_credentials = dict(
-        email='userexample@test.com',
-        firstname='firstname_test',
-        lastname='lastname_test',
-        password='passw',
-        dateofbirth='05/10/2000')
-
-
-def create_user_EP(test_client, data_dict):
-    return test_client.post('/create_user',
-                            data=data_dict, follow_redirects=True)
-
-
-def user_login_EP(test_client, email, password):
-    return test_client.post('/login',
-                            data=dict(email=email,
-                                    password=password),
-                            follow_redirects=True)
-
-
-def populate_User():
+def populate_user():
     new_user = User()
     new_user.email = "newtestinguser@test.com"
     new_user.firstname = "firstname_test"
@@ -42,7 +18,7 @@ def populate_User():
 def test_create_user(test_app):
     app, test_client = test_app
 
-    temp_user_example_dict = user_example_credentials
+    temp_user_example_dict = user_example
 
     # --- UNIT TESTS ---
     with app.app_context():
@@ -51,7 +27,7 @@ def test_create_user(test_app):
         assert getuser is None
 
         # create a new user and check if he has been added
-        new_user = populate_User()
+        new_user = populate_user()
 
         db.session.add(new_user)
         db.session.commit()
@@ -74,7 +50,7 @@ def test_create_user(test_app):
             assert False
 
         # creation of a user with an already existing email must fail
-        new_user_2 = populate_User()
+        new_user_2 = populate_user()
         try:
             db.session.add(new_user_2)
             db.session.commit()
@@ -86,23 +62,23 @@ def test_create_user(test_app):
         
 
     # --- COMPONENTS TESTS ---
-    assert create_user_EP(test_client, temp_user_example_dict).status_code == 200
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
 
     # creation of a user with an already existing email must fail
-    assert create_user_EP(test_client, temp_user_example_dict).status_code ==  403
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code ==  403
 
     # creation of a user with wrong email syntax
     temp_user_example_dict['email'] = 'newuserwrongemail'
-    assert create_user_EP(test_client, temp_user_example_dict).status_code == 400
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 400
 
     # creation of a user with an already existing email must fail (in this case user was added via db.commit)
     temp_user_example_dict['email'] = "newtestinguser@test.com"
-    assert create_user_EP(test_client, temp_user_example_dict).status_code == 403
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 403
 
 def test_login_user(test_app):
     app, test_client = test_app
 
-    temp_user_example_dict = user_example_credentials
+    temp_user_example_dict = user_example
 
     test_client.post('/create_user', data=temp_user_example_dict, follow_redirects=True)
     
@@ -142,15 +118,15 @@ def test_login_user(test_app):
 
     # creation of a new user when already logged in must fail
     temp_user_example_dict['email'] = 'newtestinguser2@test.com'
-    assert create_user_EP(test_client, temp_user_example_dict).status_code == 403
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 403
 
 
 def test_logout_user(test_app):
     app, test_client = test_app
 
-    temp_user_example_dict = user_example_credentials
+    temp_user_example_dict = user_example
 
-    create_user_EP(test_client, temp_user_example_dict)
+    create_user_EP(test_client, **temp_user_example_dict)
     
     # --- UNIT TESTS --- nothing to be tested as unit
 

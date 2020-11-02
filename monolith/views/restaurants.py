@@ -27,16 +27,15 @@ def _check_tables(form_tables):
         tables_to_add.append(new_table)
 
     if tot_capacity == 0: 
-        raise ValueError('At least one table with capacity> 0 must be provided')
+        raise ValueError('At least one table with capacity > 0 must be provided')
 
     return tables_to_add, tot_capacity
 
 
 def _check_dishes(form_dishes):
-    if form_dishes is None: 
-        raise ValueError()
     dishes_to_add = []
     must_be_present = ['dish_name', 'price', 'ingredients']
+
     for dish in form_dishes:
 
         if 'restaurant_id' in dish:
@@ -100,19 +99,12 @@ def create_restaurant():
                         for el in l:
                             el.restaurant_id = new_restaurant.id
                             db.session.add(el)
-                    db.session.commit() #TODO: delete restaurant=? 
+                    db.session.commit()
                 except:
                     db.session.rollback()
                     db.session.delete(new_restaurant)
                     db.session.commit()
                     return make_response(render_template('create_restaurant.html', form=RestaurantForm()), 400)
-                
-                '''
-                for q in db.session.query(Table):
-                    print(q.table_name)
-                for q in db.session.query(Dish):
-                    print(q.dish_name)
-                '''
 
                 return redirect('/restaurants')
 

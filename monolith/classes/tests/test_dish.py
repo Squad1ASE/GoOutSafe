@@ -19,7 +19,7 @@ def test_insert_dish(test_app):
     # --- UNIT TESTS ---
     with app.app_context():
         # create a user and a restaurant to testing dish insertions
-        create_user_EP(test_client, user_test_dict)
+        #create_user_EP(test_client, user_test_dict)
         user_test = db.session.query(User).filter(User.email == user_test_dict.get('email')).first()
         assert user_test is not None
         restaurant_dict = dict(

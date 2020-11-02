@@ -62,3 +62,9 @@ class RestaurantForm(FlaskForm):
     dishes = f.FieldList(f.FormField(DishForm), min_entries=1, max_entries=100)
 
     display = ['name', 'lat', 'lon', 'phone', 'cuisine_type', 'prec_measures', 'avg_time_of_stay']
+
+
+
+class GetPatientInformationsForm(FlaskForm):
+    email = f.StringField('email', validators=[DataRequired(), Length(1, 64), Email()])
+    display = ['email']

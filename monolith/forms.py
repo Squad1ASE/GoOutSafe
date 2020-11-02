@@ -11,11 +11,21 @@ class LoginForm(FlaskForm):
 
 class UserForm(FlaskForm):
     email = f.StringField('email', validators=[DataRequired(), Length(1, 64), Email()])    
+    phone = f.StringField('phone', validators=[DataRequired()])
     firstname = f.StringField('firstname', validators=[DataRequired()])
     lastname = f.StringField('lastname', validators=[DataRequired()])
     password = f.PasswordField('password', validators=[DataRequired(), Length(1,8)])
     dateofbirth = f.DateField('dateofbirth', format='%d/%m/%Y')
-    display = ['email', 'firstname', 'lastname', 'password', 'dateofbirth']
+    display = ['email', 'phone','firstname', 'lastname', 'password', 'dateofbirth']
+
+class EditUserForm(FlaskForm):
+    phone = f.StringField('phone', validators=[DataRequired()])
+    firstname = f.StringField('firstname', validators=[DataRequired()])
+    lastname = f.StringField('lastname', validators=[DataRequired()])
+    old_password = f.PasswordField('old_password', validators=[DataRequired(), Length(1,8)])
+    new_password = f.PasswordField('new_password', validators=[DataRequired(), Length(1,8)])
+    dateofbirth = f.DateField('dateofbirth', format='%d/%m/%Y')
+    display = ['phone','firstname', 'lastname', 'old_password', 'new_password', 'dateofbirth']
 
 class RestaurantForm(FlaskForm):
     name = f.StringField('name', validators=[DataRequired()])

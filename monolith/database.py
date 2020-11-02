@@ -18,6 +18,8 @@ class User(db.Model):
             return user
         raise SyntaxError('Wrong email syntax')
 
+    phone = db.Column(db.Integer, nullable=False) #todo checklen?
+
     firstname = db.Column(db.Unicode(128))
     lastname = db.Column(db.Unicode(128))
     password = db.Column(db.Unicode(128), nullable=False) 

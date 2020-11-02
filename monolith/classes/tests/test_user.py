@@ -10,6 +10,7 @@ from sqlalchemy import exc
     
 user_example_credentials = dict(
         email='userexample@test.com',
+        phone='3333333333',
         firstname='firstname_test',
         lastname='lastname_test',
         password='passw',
@@ -31,12 +32,20 @@ def user_login_EP(test_client, email, password):
 def populate_User():
     new_user = User()
     new_user.email = "newtestinguser@test.com"
+    new_user.phone = '3333333333'
     new_user.firstname = "firstname_test"
     new_user.lastname = "lastname_test"
     new_user.password = "passw"
     new_user.dateofbirth = datetime.date(2020, 10, 5)
 
     return new_user
+
+def modify_User(user):
+    user.phone = '4444444444'
+    user.firstname = "firstname_test2"
+    user.lastname = "lastname_test2"
+    user.password = 'newpassw'
+    user.dateofbirth = datetime.date(2010, 12, 20)
 
 
 def test_create_user(test_app):
@@ -59,6 +68,7 @@ def test_create_user(test_app):
         getuser = db.session.query(User).filter(User.email == 'newtestinguser@test.com').first()
         assert getuser is not None
         assert getuser.email == 'newtestinguser@test.com'
+        assert getuser.phone == 3333333333
         assert getuser.firstname == "firstname_test"
         assert getuser.lastname == "lastname_test"
         assert getuser.password == "passw"
@@ -162,3 +172,77 @@ def test_logout_user(test_app):
     result = test_client.get('/logout', follow_redirects=True)
 
     assert result.status_code == 200
+
+def test_edit_user(test_app):
+
+    app, test_client = test_app
+
+    temp_user_example_dict = user_example_credentials
+
+    #--- UNIT TESTS ---
+
+    with app.app_context():
+
+        # modify a user and check if it id modified
+        getuser = db.session.query(User).filter(User.email == 'userexampletest@test.com').first()
+        modify_User(getuser)
+        db.session.commit()
+
+        getuser = db.session.query(User).filter(User.email == 'userexampletest@test.com').first()
+        
+        assert getuser is not None
+        assert getuser.email == 'userexampletest@test.com'
+        assert getuser.phone == 4444444444
+        assert getuser.firstname == "firstname_test2"
+        assert getuser.lastname == "lastname_test2"
+        assert getuser.password == "newpassw"
+        assert getuser.dateofbirth == datetime.date(2010, 12, 20)
+
+    #--- COMPONENT TESTS ---
+
+    # create a user
+
+    test_client.post('/create_user', data=temp_user_example_dict, follow_redirects=True)
+
+    # login with a user
+    test_client.post('/login',
+                            data=dict(email=temp_user_example_dict['email'],
+                                    password=temp_user_example_dict['password']),
+                            follow_redirects=True)
+
+    new_values = dict(
+        phone = '4444444444',
+        firstname = 'new_firstname',
+        lastname = 'new_lastname',
+        old_password = 'passw',
+        new_password = 'newpassw',
+        dateofbirth = '10/12/2020'
+    )
+    
+    # try to edit the user with success
+    
+    result = test_client.post('/edit_user_informations', data=new_values, follow_redirects=True)
+
+    assert result.status_code == 200
+
+    # try to edit an user with wrong password
+
+    new_values['old_password'] = 'passw2'
+
+    result = test_client.post('/edit_user_informations', data=new_values, follow_redirects=True)
+
+    assert result.status_code == 401
+
+    # try to send an invalid form (password too long)
+
+    new_values['old_password'] = 'passwtoolong'
+
+    result = test_client.post('/edit_user_informations', data=new_values, follow_redirects=True)
+
+    assert result.status_code == 400
+
+
+
+
+
+

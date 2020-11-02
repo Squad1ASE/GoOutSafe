@@ -60,7 +60,7 @@ def create_app():
             example.lon = 10.408347
 
             example.capacity = 30
-            example.cuisine_type= ['ciao','pippo']
+            example.cuisine_type= [Restaurant.CUISINE_TYPES(1),Restaurant.CUISINE_TYPES(2)]
             example.prec_measures = 'leggeX'
             example.tot_reviews = 2
             example.avg_rating = 2.0

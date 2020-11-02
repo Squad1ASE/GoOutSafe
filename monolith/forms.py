@@ -45,7 +45,7 @@ class RestaurantForm(FlaskForm):
     name = f.StringField('Name', validators=[DataRequired()])
     lat = f.FloatField('Latitude', validators=[DataRequired()])
     lon = f.FloatField('Longitude', validators=[DataRequired()])
-    phone = f.IntegerField('Phone', validators=[DataRequired()])
+    phone = f.StringField('Phone', validators=[DataRequired()])
 
     # Note: the capacity is automatically derived from tables settings
 

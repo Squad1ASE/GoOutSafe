@@ -22,7 +22,6 @@ class FormEnum(Enum):
         return str(self.value)
 
 
-
 # the following consist of tables inside the db tables are defined using model
 class User(db.Model):
     __tablename__ = 'user'
@@ -81,33 +80,64 @@ class Restaurant(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     owner = relationship('User', foreign_keys='Restaurant.owner_id')
 
-    name = db.Column(db.Unicode(128), nullable=False)
+    name = db.Column(db.Unicode(128), db.CheckConstraint('length(name) > 0'), nullable=False)
     lat = db.Column(db.Float, nullable=False)  # restaurant latitude
     lon = db.Column(db.Float, nullable=False)  # restaurant longitude
-    phone = db.Column(db.Integer, nullable=False) #TODO checklen?
+    phone = db.Column(db.Unicode(128), db.CheckConstraint('length(phone) > 0'), nullable=False) #TODO checklen?
 
     capacity = db.Column(db.Integer, db.CheckConstraint('capacity>0'), nullable=False)
     prec_measures = db.Column(db.Unicode(128), nullable=False)
 
-    cuisine_type = db.Column(db.PickleType, nullable=False)
+    cuisine_type = db.Column(db.PickleType, db.CheckConstraint('length(cuisine_type) > 0'), nullable=False)
 
     # average time to eat, expressed in minutes 
     avg_time_of_stay = db.Column(db.Integer, db.CheckConstraint('avg_time_of_stay>=15'), nullable=False)
 
     tot_reviews = db.Column(db.Integer, db.CheckConstraint('tot_reviews>=0'), default=0)   # periodically updated in background
-    avg_rating = db.Column(db.Float, db.CheckConstraint('avg_rating>=0' and 'avg_rating<=5'), default=0)
+    avg_rating = db.Column(db.Float, db.CheckConstraint('avg_rating>=0 and avg_rating<=5'), default=0)
     likes = db.Column(db.Integer, db.CheckConstraint('likes>=0'), default=0)    # periodically updated in background
+
+    @validates('owner_id')
+    def validate_owner_id(self, key, owner_id):
+        if (owner_id is None): raise ValueError("owner_id is None")
+        if (owner_id <= 0): raise ValueError("owner_id must be > 0")
+        return owner_id
+        
+    @validates('cuisine_type')
+    def validate_cuisine_type(self, key, cuisine_types):
+        if not isinstance(cuisine_types, list): raise ValueError("cuisine_type is not a list")
+        if any(not isinstance(i,Restaurant.CUISINE_TYPES) for i in cuisine_types): raise ValueError("cuisine_type elements are not CUISINE_TYPES")
+        if (len(cuisine_types) == 0): raise ValueError("cuisine_type is empty")
+        return cuisine_types
 
 
 class Table(db.Model):
     __tablename__ = 'table'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
-    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'))
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
     restaurant = relationship('Restaurant', foreign_keys='Table.restaurant_id') 
 
-    table_name = db.Column(db.Unicode(128), nullable=False)   
+    table_name = db.Column(db.Unicode(128), db.CheckConstraint('length(table_name) > 0'), nullable=False)   
     capacity = db.Column(db.Integer, db.CheckConstraint('capacity>0'), nullable=False)
+
+    @validates('restaurant_id')
+    def validate_restaurant_id(self, key, restaurant_id):
+        if (restaurant_id is None): raise ValueError("restaurant_id is None")
+        if (restaurant_id <= 0): raise ValueError("restaurant_id must be > 0")
+        return restaurant_id
+
+    @validates('table_name')
+    def validate_table_name(self, key, table_name):
+        if (table_name is None): raise ValueError("table_name is None")
+        if (len(table_name) == 0): raise ValueError("table_name is empty")
+        return table_name
+
+    @validates('capacity')
+    def validate_capacity(self, key, capacity):
+        if (capacity is None): raise ValueError("capacity is None")
+        if (capacity <= 0): raise ValueError("capacity must be > 0")
+        return capacity
 
 
 class WorkingDay(db.Model):
@@ -195,12 +225,36 @@ class Dish(db.Model):
     __tablename__ = 'dishes'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
-    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'))
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
     restaurant = relationship('Restaurant', foreign_keys='Dish.restaurant_id')
 
-    dish_name = db.Column(db.Unicode(128), nullable=False)
-    price = db.Column(db.Float, db.CheckConstraint('price>=0'), nullable=False)
-    ingredients = db.Column(db.PickleType, nullable=False)
+    dish_name = db.Column(db.Unicode(128), db.CheckConstraint('length(dish_name) > 0'), nullable=False)
+    price = db.Column(db.Float, db.CheckConstraint('price>0'), nullable=False)
+    ingredients = db.Column(db.Unicode(128), db.CheckConstraint('length(ingredients) > 0'), nullable=False)
+
+    @validates('restaurant_id')
+    def validate_restaurant_id(self, key, restaurant_id):
+        if (restaurant_id is None): raise ValueError("restaurant_id is None")
+        if (restaurant_id <= 0): raise ValueError("restaurant_id must be > 0")
+        return restaurant_id
+
+    @validates('dish_name')
+    def validate_dish_name(self, key, dish_name):
+        if (dish_name is None): raise ValueError("dish_name is None")
+        if (len(dish_name) == 0): raise ValueError("dish_name is empty")
+        return dish_name
+
+    @validates('price')
+    def validate_price(self, key, price):
+        if (price is None): raise ValueError("price is None")
+        if (price <= 0): raise ValueError("price must be > 0")
+        return price
+
+    @validates('ingredients')
+    def validate_ingredients(self, key, ingredients):
+        if (ingredients is None): raise ValueError("ingredients is None")
+        if (len(ingredients) == 0): raise ValueError("ingredients is empty")
+        return ingredients
 
 
 class Quarantine(db.Model):
@@ -225,4 +279,3 @@ class Notification(db.Model):
     pending = db.Column(db.Boolean, default=True)
     type_ = db.Column(db.Integer)  # 0=through email, 2=app
     date = db.Column(db.DateTime)
-

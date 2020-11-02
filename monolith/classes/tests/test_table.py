@@ -1,7 +1,5 @@
 from monolith.database import db, User, Restaurant, Table
-from monolith.classes.tests.conftest import test_app
-from monolith.classes.tests.test_user import user_example_credentials as user_test_dict
-from monolith.classes.tests.test_user import create_user_EP
+from monolith.classes.tests.conftest import test_app, create_user_EP
 import json
 from sqlalchemy import exc
 
@@ -18,8 +16,8 @@ def test_insert_table(test_app):
     # --- UNIT TESTS ---
     with app.app_context():
         # create a user and a restaurant to testing table insertions
-        # create_user_EP(test_client, user_test_dict)
-        user_test = db.session.query(User).filter(User.email == user_test_dict.get('email')).first()
+        assert create_user_EP(test_client, email='userexampletable@test.com').status_code == 200
+        user_test = db.session.query(User).filter(User.email == 'userexampletable@test.com').first()
         assert user_test is not None
         restaurant_dict = dict(
             owner_id = user_test.id,

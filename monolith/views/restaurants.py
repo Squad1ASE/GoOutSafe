@@ -3,9 +3,9 @@ from monolith.database import db, Restaurant, Like, Table, Dish
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
-from monolith.forms import UserForm
-from monolith.forms import RestaurantForm
+from monolith.forms import UserForm, RestaurantSearch, RestaurantForm
 from monolith.views import auth
+from sqlalchemy import and_
 
 restaurants = Blueprint('restaurants', __name__)
 
@@ -111,3 +111,57 @@ def _like(restaurant_id):
     else:
         message = 'You\'ve already liked this place!'
     return _restaurants(message)
+
+
+@restaurants.route('/restaurants/search', methods=['GET', 'POST'])
+@login_required
+def search():
+
+    form = RestaurantSearch()
+
+    if request.method == 'POST':
+
+        if form.validate_on_submit():
+            
+            for cuisine in form.cuisine_type.data:
+                print(cuisine)
+
+            allrestaurants = db.session.query(Restaurant)
+
+            if 'name' in request.form:
+                allrestaurants = allrestaurants.filter(Restaurant.name.ilike(r"%{}%".format(request.form['name'])))
+            if 'lat' in request.form and request.form['lat'] != '':
+                allrestaurants = allrestaurants.filter(Restaurant.lat >= (float(request.form['lat'])-0.1), Restaurant.lat <= (float(request.form['lat'])+0.1))
+            if 'lon' in request.form and request.form['lon'] != '':
+                allrestaurants = allrestaurants.filter(Restaurant.lon >= (float(request.form['lon'])-0.1), Restaurant.lon <= (float(request.form['lon'])+0.1))
+            
+            #print(request.form['cuisine_type'])
+
+            return render_template('restaurantsearch.html', form=form, restaurants=allrestaurants)
+            '''
+            for val in allrestaurants:
+                print(val)
+                print(val.phone)
+            '''
+
+            '''
+            name = request.form['name']
+            lat = float(request.form['lat'])
+            lon = float(request.form['lon'])
+            cuisine_type = request.form['cuisine_type']
+            print(cuisine_type)
+            test_rest = Restaurant()
+            form.populate_obj(test_rest)
+            #result = Restaurant.query.filter(Restaurant.name.ilike(r"%{}%".format(name))).all()
+            #result = Restaurant.query.filter(Restaurant.lat >= (lat-0.1), Restaurant.lat <= (lat+0.1)).all()
+            for valu in allrestaurants:
+                print(valu)
+            #result = Restaurant.query.filter_by(name = "").all()
+            print(allrestaurants)
+            print(result)
+            form = RestaurantSearch()
+            '''
+
+
+    
+    return render_template('restaurantsearch.html', form=form)

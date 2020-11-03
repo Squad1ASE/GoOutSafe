@@ -1,7 +1,7 @@
 from flask import Blueprint, redirect, render_template, request, make_response
 from monolith.database import db, User
 from monolith.auth import admin_required
-from monolith.forms import UserForm, EditUserForm
+from monolith.forms import UserForm, EditUserForm, RestaurantSearch
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
 

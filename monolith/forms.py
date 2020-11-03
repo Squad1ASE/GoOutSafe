@@ -74,3 +74,16 @@ class RestaurantForm(FlaskForm):
 class GetPatientInformationsForm(FlaskForm):
     email = f.StringField('email', validators=[DataRequired(), Length(1, 64), Email()])
     display = ['email']
+
+class RestaurantSearch(FlaskForm):
+    name = f.StringField('Name')
+    lat = f.StringField('Latitude')
+    lon = f.StringField('Longitude')
+
+    cuisine_type = f.SelectMultipleField(
+        'Cuisine types', 
+        choices = Restaurant.CUISINE_TYPES.choices(),
+        coerce = Restaurant.CUISINE_TYPES.coerce
+    )
+
+    display = ['name', 'lat', 'lon', 'cuisine_type']

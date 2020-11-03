@@ -13,42 +13,21 @@ restaurants = Blueprint('restaurants', __name__)
 def _check_tables(form_tables):
     tables_to_add = []
     tot_capacity = 0
-    must_be_present = ['capacity', 'table_name']
 
     for table in form_tables:
-        if 'restaurant_id' in table:
-            raise ValueError()
-
-        if not all(k in table for k in must_be_present):
-            raise ValueError()
-
         new_table = Table(**table)
         tot_capacity += new_table.capacity
         tables_to_add.append(new_table)
-
-    if tot_capacity == 0: 
-        raise ValueError('At least one table with capacity > 0 must be provided')
 
     return tables_to_add, tot_capacity
 
 
 def _check_dishes(form_dishes):
     dishes_to_add = []
-    must_be_present = ['dish_name', 'price', 'ingredients']
 
     for dish in form_dishes:
-
-        if 'restaurant_id' in dish:
-            raise ValueError()
-
-        if not all(k in dish for k in must_be_present):
-            raise ValueError()
-
         new_dish = Dish(**dish)
         dishes_to_add.append(new_dish)
-
-    if len(dishes_to_add) == 0: 
-        raise ValueError('At least one dish must be provided')
 
     return dishes_to_add
 
@@ -85,26 +64,15 @@ def create_restaurant():
                 except:
                     return make_response(render_template('create_restaurant.html', form=RestaurantForm()), 400)
 
-                # database check when insert the new restaurant
-                try:
-                    db.session.add(new_restaurant)
-                    db.session.commit()
-                except:
-                    db.session.rollback()
-                    return make_response(render_template('create_restaurant.html', form=RestaurantForm()), 400)
+                db.session.add(new_restaurant)
+                db.session.commit()
 
                 # database check when insert the tables and dishes
-                try: 
-                    for l in [tables_to_add, dishes_to_add]:
-                        for el in l:
-                            el.restaurant_id = new_restaurant.id
-                            db.session.add(el)
-                    db.session.commit()
-                except:
-                    db.session.rollback()
-                    db.session.delete(new_restaurant)
-                    db.session.commit()
-                    return make_response(render_template('create_restaurant.html', form=RestaurantForm()), 400)
+                for l in [tables_to_add, dishes_to_add]:
+                    for el in l:
+                        el.restaurant_id = new_restaurant.id
+                        db.session.add(el)
+                db.session.commit()
 
                 return redirect('/restaurants')
 

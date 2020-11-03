@@ -22,3 +22,4 @@ def load_user(user_id):
     if user is not None:
         user._authenticated = True
     return user
+

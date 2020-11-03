@@ -50,13 +50,11 @@ def get_patient_informations():
                                                                         startdate=startdate,
                                                                         enddate=enddate
                                                                         ))
-
         #getuser = db.session.query(User).filter(User.email == request.args.get("email")).first()
         #getuserquarantine_status = db.session.query(Quarantine).filter(Quarantine.user_id == getuser.id and Quarantine.in_observation == True).first()
-
         #if request.form['mark_positive_button'] == 'mark_positive' and getuserquarantine_status is None:
-        if request.form['mark_positive_button'] == 'mark_positive':
-
+        if 'mark_positive_button' in request.form and request.form['mark_positive_button'] == 'mark_positive':
+                
             getuser = db.session.query(User).filter(User.email == request.args.get("email")).first()
 
             startdate = datetime.date.today()
@@ -71,32 +69,22 @@ def get_patient_informations():
             #TODO: maybe try catch here is necessary
             db.session.add(quarantine)
             db.session.commit()   
-                            
+                
             # this redirect isn't an error, it display that patient has been successfully marked positive
             return make_response(render_template('error.html', message="Patient marked as positive", redirect_url="/"), 555)     
 
-        if request.form['go_back'] == 'go_back':
-            print("goback")
-            #TODO: test this return
-            return redirect('/patient_informations')
-
+    if 'go_back_button' in request.form and request.form['go_back_button'] == 'go_back':
+        return redirect('/patient_informations')
 
     if 'email' in request.args:
         getuser = db.session.query(User).filter(User.email == request.args.get("email")).first()
         getuserquarantine_status = db.session.query(Quarantine).filter(Quarantine.user_id == getuser.id and Quarantine.in_observation == True).first()
         
+        html = 'patient_informations.html'
         if getuserquarantine_status is not None:
-            return render_template('patient_informations_nomarkbutton.html', email=request.args.get("email"),
-                                                                firstname=request.args.get("firstname"),
-                                                                lastname=request.args.get("lastname"),
-                                                                dateofbirth=request.args.get("dateofbirth"),
-                                                                state=request.args.get("state"),
-                                                                startdate=request.args.get("startdate"),
-                                                                enddate=request.args.get("enddate")
-                                                                )
-        
-        #TODO: test this return
-        return render_template('patient_informations.html', email=request.args.get("email"),
+            html = 'patient_informations_nomarkbutton.html'
+            
+        return render_template(html, email=request.args.get("email"),
                                                             firstname=request.args.get("firstname"),
                                                             lastname=request.args.get("lastname"),
                                                             dateofbirth=request.args.get("dateofbirth"),

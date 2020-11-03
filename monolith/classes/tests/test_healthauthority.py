@@ -55,9 +55,26 @@ def test_mark_positive(test_app):
         assert getquarantinenewstatus.in_observation == False
     
     # --- COMPONENTS TESTS ---
+def test_component_health_authority(test_app):
+
+    app, test_client = test_app
+
+    # create a health authority and an user for testing 
+    temp_ha_dict = dict(
+        email='healthauthority@ha.com',
+        phone='3333333333',
+        firstname='Ha',
+        lastname='Ha',
+        password='ha',
+        dateofbirth='05/10/2000'
+    )
+    temp_user_example_dict = user_example
+    assert create_user_EP(test_client, **temp_ha_dict).status_code == 200 
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
+
     # access to patient information is forbidden for customers
     user_login_EP(test_client, user_example['email'], user_example['password'])
-
+    
     result = test_client.get('/patient_informations', follow_redirects=True)
     assert result.status_code == 403
 
@@ -81,7 +98,11 @@ def test_mark_positive(test_app):
     result = test_client.post('/patient_informations?email=userexample%40test.com', data=dict(mark_positive_button='mark_positive'), follow_redirects=True)
     assert result.status_code == 555
 
+    # a patient already marked will return a different html
+    result = test_client.post('/patient_informations', data=dict(email=user_example['email']), follow_redirects=True)
+    assert result.status_code == 200
+
     # go to the previous page when patient is already marked as positive
-    result = test_client.get('/patient_informations?email=userexample%40test.com', data=dict(mark_positive_button='mark_positive'), follow_redirects=True)
+    result = test_client.get('/patient_informations?email=userexample%40test.com', data=dict(go_back_button='go_back'), follow_redirects=True)
     assert result.status_code == 200
     

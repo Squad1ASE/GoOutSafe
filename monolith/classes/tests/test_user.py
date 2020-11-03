@@ -84,7 +84,6 @@ def test_create_user(test_app):
     assert test_client.get('/create_user').status_code == 403
 
 
-
 def test_login_user(test_app):
     app, test_client = test_app
 

@@ -224,6 +224,9 @@ def test_create_restaurant(test_app):
     # authentication with correct credentials 
     assert user_login_EP(test_client, email='userexamplerestaurant@test.com', password='passw').status_code == 200
 
+    # get with success
+    assert test_client.get('/create_restaurant', follow_redirects=True).status_code == 200
+
     # correct restaurant - pt1
     correct_restaurant = { 
         'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 

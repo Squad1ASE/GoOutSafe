@@ -33,13 +33,9 @@ def create_user():
                 return render_template('create_user.html', form=form), 403
                 
             new_user.set_password(form.password.data) #pw should be hashed with some salt
-            # database check
-            try:
-                db.session.add(new_user)
-                db.session.commit()
-            except:
-                #TODO: the two missing return in coverage test are this
-                return make_response(render_template('create_user.html', form=form), 400)
+            
+            db.session.add(new_user)
+            db.session.commit()
 
             return redirect('/users')
         else:

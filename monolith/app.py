@@ -25,6 +25,7 @@ def create_app():
     login_manager.init_app(app)
     db.create_all(app=app)
 
+
     with app.app_context():
 
         q = db.session.query(User).filter(User.email == 'admin@admin.com')

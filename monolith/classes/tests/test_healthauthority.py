@@ -10,6 +10,7 @@ def test_mark_positive(test_app):
     # create a health authority and an user for testing 
     temp_ha_dict = dict(
         email='healthauthority@ha.com',
+        phone='3333333333',
         firstname='Ha',
         lastname='Ha',
         password='ha',

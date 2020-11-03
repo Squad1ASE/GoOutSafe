@@ -68,14 +68,16 @@ def get_patient_informations():
             quarantine.end_date = enddate
             quarantine.in_observation = True
 
+            #TODO: maybe try catch here is necessary
             db.session.add(quarantine)
             db.session.commit()   
                             
-            # this redirect isn't an error, it display that patient has been successfully marked positive 
+            # this redirect isn't an error, it display that patient has been successfully marked positive
             return make_response(render_template('error.html', message="Patient marked as positive", redirect_url="/"), 555)     
 
         if request.form['go_back'] == 'go_back':
             print("goback")
+            #TODO: test this return
             return redirect('/patient_informations')
 
 
@@ -83,7 +85,7 @@ def get_patient_informations():
         getuser = db.session.query(User).filter(User.email == request.args.get("email")).first()
         getuserquarantine_status = db.session.query(Quarantine).filter(Quarantine.user_id == getuser.id and Quarantine.in_observation == True).first()
         
-        if getuserquarantine_status is not None: 
+        if getuserquarantine_status is not None:
             return render_template('patient_informations_nomarkbutton.html', email=request.args.get("email"),
                                                                 firstname=request.args.get("firstname"),
                                                                 lastname=request.args.get("lastname"),
@@ -93,6 +95,7 @@ def get_patient_informations():
                                                                 enddate=request.args.get("enddate")
                                                                 )
         
+        #TODO: test this return
         return render_template('patient_informations.html', email=request.args.get("email"),
                                                             firstname=request.args.get("firstname"),
                                                             lastname=request.args.get("lastname"),

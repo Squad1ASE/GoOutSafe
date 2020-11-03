@@ -34,6 +34,7 @@ def create_app():
             # test for a user defined in database.db
             example = User()
             example.email = 'admin@admin.com'
+            example.phone = '3333333333'
             example.firstname = 'Admin'
             example.lastname = 'Admin'
             example.set_password('admin')
@@ -49,6 +50,7 @@ def create_app():
             # test for a user defined in database.db
             example = User()
             example.email = 'healthauthority@ha.com'
+            example.phone = '3333333333'
             example.firstname = 'Ha'
             example.lastname = 'Ha'
             example.set_password('ha')
@@ -64,6 +66,7 @@ def create_app():
             # test for a user defined in database.db
             example = User()
             example.email = 'test@test.com'
+            example.phone = '3333333333'
             example.firstname = 'Testfirstname'
             example.lastname = 'Testlastname'
             example.set_password('test')

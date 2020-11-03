@@ -9,6 +9,7 @@ import datetime
 # --- UTILITIES USER ---
 user_example = dict(
     email='userexample@test.com',
+    phone='3333333333',
     firstname='firstname_test',
     lastname='lastname_test',
     password='passw',
@@ -16,11 +17,12 @@ user_example = dict(
 )
 
 def create_user_EP(
-        test_client, email=user_example['email'], firstname=user_example['firstname'], 
+        test_client, email=user_example['email'], phone=user_example['phone'],firstname=user_example['firstname'], 
         lastname=user_example['lastname'], password=user_example['password'], dateofbirth=user_example['dateofbirth']
     ):
     data = dict(
         email=email,
+        phone=phone,
         firstname=firstname,
         lastname=lastname,
         password=password,
@@ -36,7 +38,15 @@ def user_login_EP(test_client, email=user_example['email'], password=user_exampl
     )
     return test_client.post('/login', data=data, follow_redirects=True)
 
-
+def edit_user_EP(
+    test_client, phone, old_passw, new_passw
+):
+    data = dict(
+        phone=phone,
+        old_password=old_passw,
+        new_password=new_passw
+    )
+    return test_client.post('/edit_user_informations', data=data, follow_redirects=True)
 
 # --- UTILITIES RESTAURANT  ---
 restaurant_example = { 

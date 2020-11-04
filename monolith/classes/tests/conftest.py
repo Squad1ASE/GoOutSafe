@@ -1,5 +1,5 @@
 import pytest
-from monolith.database import db, Restaurant
+from monolith.database import db, Restaurant, WorkingDay
 from monolith.app import create_app
 import tempfile
 import os
@@ -53,7 +53,8 @@ restaurant_example = {
     'name':'RestaurantExample', 'lat':22, 'lon':22, 'phone':'3346734121', 
     'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
     'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-    'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+    'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+    'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
 }
 
 # recall: to call this function you must be logged in

@@ -50,14 +50,15 @@ def test_insert_dish(test_app):
             dict(restaurant_id = restaurant.id, dish_name = 'pizza', price = 4.0, ingredients = None),
             dict(restaurant_id = restaurant.id, dish_name = 'pizza', price = 4.0, ingredients = '')
         ]
+        count_assert = 0
         for d in incorrect_dishes:
             try:
                 dish = Dish(**d)
-                assert False
             except ValueError:
+                count_assert += 1
                 assert True
-            except Exception:
-                assert False
+        assert len(incorrect_dishes) == count_assert
+
 
         # missing mandatory fields
         incorrect_dishes = [
@@ -66,17 +67,17 @@ def test_insert_dish(test_app):
             dict(restaurant_id = restaurant.id, dish_name = 'pizza', ingredients = 'pomodoro, mozzarella'),
             dict(restaurant_id = restaurant.id, dish_name = 'pizza', price = 4.0)
         ]
+        count_assert = 0
         for d in incorrect_dishes:
             dish = Dish(**d)
             try:
                 db.session.add(dish)
                 db.session.commit()
-                assert False
             except (exc.IntegrityError, exc.InvalidRequestError):
                 db.session.rollback()
+                count_assert += 1
                 assert True
-            except Exception:
-                assert False
+        assert len(incorrect_dishes) == count_assert
 
         # correct dishes
         correct_dishes = [

@@ -1,5 +1,6 @@
 from monolith.database import db, User, Quarantine
-from monolith.classes.tests.conftest import test_app, create_user_EP, user_login_EP, user_example
+from monolith.classes.tests.conftest import test_app 
+from monolith.utilities import create_user_EP, user_login_EP, customers_example, health_authority_example
 import datetime
 from sqlalchemy import exc
 
@@ -7,17 +8,9 @@ from sqlalchemy import exc
 def test_mark_positive(test_app):
     app, test_client = test_app
     
-    # create a health authority and an user for testing 
-    temp_ha_dict = dict(
-        email='healthauthority@ha.com',
-        phone='3333333333',
-        firstname='Ha',
-        lastname='Ha',
-        password='ha',
-        dateofbirth='05/10/2000'
-    )
-    temp_user_example_dict = user_example
-    assert create_user_EP(test_client, **temp_ha_dict).status_code == 200 
+    
+    temp_user_example_dict = customers_example[0]
+    assert create_user_EP(test_client, **health_authority_example).status_code == 200 
     assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
 
     # --- UNIT TESTS ---
@@ -59,21 +52,12 @@ def test_component_health_authority(test_app):
 
     app, test_client = test_app
 
-    # create a health authority and an user for testing 
-    temp_ha_dict = dict(
-        email='healthauthority@ha.com',
-        phone='3333333333',
-        firstname='Ha',
-        lastname='Ha',
-        password='ha',
-        dateofbirth='05/10/2000'
-    )
-    temp_user_example_dict = user_example
-    assert create_user_EP(test_client, **temp_ha_dict).status_code == 200 
+    temp_user_example_dict = customers_example[0]
+    assert create_user_EP(test_client, **health_authority_example).status_code == 200 
     assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
 
     # access to patient information is forbidden for customers
-    user_login_EP(test_client, user_example['email'], user_example['password'])
+    user_login_EP(test_client, customers_example[0]['email'], customers_example[0]['password'])
     
     result = test_client.get('/patient_informations', follow_redirects=True)
     assert result.status_code == 403
@@ -91,18 +75,18 @@ def test_component_health_authority(test_app):
     assert result.status_code == 404
     
     # correct email must returns the patient informations 
-    result = test_client.post('/patient_informations', data=dict(email=user_example['email']), follow_redirects=True)
+    result = test_client.post('/patient_informations', data=dict(email=customers_example[0]['email']), follow_redirects=True)
     assert result.status_code == 200
 
     # patient is marked as positive 
-    result = test_client.post('/patient_informations?email=userexample%40test.com', data=dict(mark_positive_button='mark_positive'), follow_redirects=True)
+    result = test_client.post('/patient_informations?email=userexample1%40test.com', data=dict(mark_positive_button='mark_positive'), follow_redirects=True)
     assert result.status_code == 555
 
     # a patient already marked will return a different html
-    result = test_client.post('/patient_informations', data=dict(email=user_example['email']), follow_redirects=True)
+    result = test_client.post('/patient_informations', data=dict(email=customers_example[0]['email']), follow_redirects=True)
     assert result.status_code == 200
 
     # go to the previous page when patient is already marked as positive
-    result = test_client.get('/patient_informations?email=userexample%40test.com', data=dict(go_back_button='go_back'), follow_redirects=True)
+    result = test_client.get('/patient_informations?email=userexample1%40test.com', data=dict(go_back_button='go_back'), follow_redirects=True)
     assert result.status_code == 200
     

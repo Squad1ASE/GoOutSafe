@@ -1,9 +1,9 @@
 from flask import Blueprint, redirect, render_template, request, make_response
-from monolith.database import db, Restaurant, Like, WorkingDay, Table, Dish, Seat
+from monolith.database import db, Restaurant, Like, WorkingDay, Table, Dish, Seat, Reservation
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
-from monolith.forms import UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail
+from monolith.forms import UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail, ReservationRequest
 from monolith.views import auth
 import datetime
 from flask_wtf import FlaskForm
@@ -109,14 +109,12 @@ def create_restaurant():
     else:
         return make_response(render_template('error.html', message="You are not logged! Redirecting to login page", redirect_url="/login"), 403)
 
-
-
 @restaurants.route('/restaurants')
 def _restaurants(message=''):
     allrestaurants = db.session.query(Restaurant)
     return render_template("restaurants.html", message=message, restaurants=allrestaurants, base_url="http://127.0.0.1:5000/restaurants")
 
-@restaurants.route('/restaurants/<restaurant_id>')
+@restaurants.route('/restaurants/<restaurant_id>', methods=['GET','POST'])
 def restaurant_sheet(restaurant_id):
     restaurantRecord = db.session.query(Restaurant).filter_by(id = int(restaurant_id)).all()[0]
 
@@ -126,7 +124,9 @@ def restaurant_sheet(restaurant_id):
     for cuisine in restaurantRecord.cuisine_type:
         cuisinetypes = cuisinetypes+cuisine.name+" "
 
-    return render_template("restaurantsheet.html", name=restaurantRecord.name, 
+    form = ReservationRequest()
+
+    data_dict = dict(name=restaurantRecord.name, 
                                                     likes=restaurantRecord.likes, 
                                                     lat=restaurantRecord.lat, 
                                                     lon=restaurantRecord.lon, 
@@ -135,9 +135,29 @@ def restaurant_sheet(restaurant_id):
                                                     cuisinetype=cuisinetypes,
                                                     totreviews=restaurantRecord.tot_reviews,
                                                     avgrating=restaurantRecord.avg_rating,
-                                                    tables=tableRecords,
-                                                    base_url="http://127.0.0.1:5000/restaurants/"+restaurant_id
-                                                    )
+                                                    base_url="http://127.0.0.1:5000/restaurants/"+restaurant_id,
+                                                    form=form)
+
+
+    if request.method == 'POST':
+
+                if form.validate_on_submit():
+                    # 1 transform datetime from form in week day
+                    # 2 search inside working day DB with restaurant ID, check if in the specific day and time the restaurant is open
+                    # 3 check the list of available tables, the search starts from reservation (consider avg_stay_time)
+                    # 4 check in the remaining tables if there is at least one that has more or equals seats then the required
+                    
+                    weekday = form.date.data.weekday() + 1
+                    
+                    workingday = db.session.query(WorkingDay).filter(WorkingDay.restaurant_id == int(restaurant_id)).filter(WorkingDay.day == WorkingDay.WEEK_DAYS(weekday)).first()
+                    if workingday is None:
+                        return render_template('restaurantsheet.html', **data_dict, state_message="Restaurant isn't open this day")
+                    else:
+                        print("ok")
+
+
+
+    return render_template("restaurantsheet.html", **data_dict)
 
 @restaurants.route('/restaurants/<int:restaurant_id>/reservation/<int:table_id>', methods=['GET','POST'])
 @login_required

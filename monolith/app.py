@@ -6,8 +6,11 @@ from monolith.database import Dish, Quarantine
 from monolith.database import Notification
 from monolith.views import blueprints
 from monolith.auth import login_manager
+from monolith.utilities import create_user_EP, user_login_EP, user_logout_EP, create_restaurant_EP, customers_example, restaurant_example, admin_example, health_authority_example
 import datetime
 import time
+
+
 
         
 def create_app():
@@ -25,12 +28,15 @@ def create_app():
     login_manager.init_app(app)
     db.create_all(app=app)
 
+    # TODO THIS SECTION MUST BE REMOVED, ONLY FOR DEMO
+    # already tested EndPoints are used to create examples
+    app.config['WTF_CSRF_ENABLED'] = False
 
     with app.app_context():
-
+        
         q = db.session.query(User).filter(User.email == 'admin@admin.com')
-        user = q.first()
-        if user is None:
+        adm = q.first()
+        if adm is None:
             # create a first admin user 
             # test for a user defined in database.db
             example = User()
@@ -44,266 +50,25 @@ def create_app():
             db.session.add(example)
             db.session.commit()
 
-        q = db.session.query(User).filter(User.email == 'healthauthority@ha.com')
-        user = q.first()
-        if user is None:
 
-            # test for a user defined in database.db
-            example = User()
-            example.email = 'healthauthority@ha.com'
-            example.phone = '3333333333'
-            example.firstname = 'Ha'
-            example.lastname = 'Ha'
-            example.set_password('ha')
-            example.dateofbirth = datetime.date(2020, 10, 5)            
-            example.is_admin = False
-            db.session.add(example)
-            db.session.commit()
+    test_client = app.test_client()
 
-        q = db.session.query(User).filter(User.email == 'test@test.com')
-        user = q.first()
-        if user is None:
+    create_user_EP(app.test_client(),**health_authority_example)
 
-            # test for a user defined in database.db
-            example = User()
-            example.email = 'test@test.com'
-            example.phone = '3333333333'
-            example.firstname = 'Testfirstname'
-            example.lastname = 'Testlastname'
-            example.set_password('test')
-            example.dateofbirth = datetime.date(2020, 10, 5)            
-            example.is_admin = False
-            db.session.add(example)
-            db.session.commit()
+    for user in customers_example:
+        create_user_EP(test_client,**user)
 
+    for usr_idx,restaurant in enumerate(restaurant_example):
+        user_login_EP(test_client, customers_example[usr_idx]['email'], 
+                                    customers_example[usr_idx]['password'])
 
-        ''' delete this part, this is a restaurant with Admin as the owner
+        create_restaurant_EP(test_client,restaurant)
 
-        q = db.session.query(User).filter(User.email == 'admin@admin.com')
-        user = q.first()
-        q = db.session.query(Restaurant).filter(Restaurant.id == 1)
-        restaurant = q.first()
-        if restaurant is None:
-            example = Restaurant()
+        user_logout_EP(test_client)
 
-            example.owner_id = user.id
-            
-            example.name = 'Trial Restaurant'            
-            example.likes = 42
-            example.phone = 555123456
-            example.lat = 43.720586
-            example.lon = 10.408347
-
-            example.capacity = 30
-            example.cuisine_type= [Restaurant.CUISINE_TYPES(1),Restaurant.CUISINE_TYPES(2)]
-            example.prec_measures = 'leggeX'
-            example.tot_reviews = 2
-            example.avg_rating = 2.0
-            example.avg_time_of_stay = 15
-
-            db.session.add(example)
-            db.session.commit()
-        '''
-
-
-        '''
-        q = db.session.query(Restaurant).filter(Restaurant.id == 1)
-        restaurant = q.first()
-        print(restaurant)
-        print(restaurant.cuisine_type)
-        print(restaurant.owner_id)
-        print(restaurant.owner)
-
-
-        q = db.session.query(Table).filter(Table.id == 1)
-        table = q.first()
-        if table is None:
-            example = Table()
-            example.restaurant_id = restaurant.id
-            example.name = 'table'
-            example.capacity = 10        
-
-            db.session.add(example)
-            db.session.commit()
-        
-        q = db.session.query(Table).filter(Table.id == 1)
-        table = q.first()
-        print(table)
-        print(table.name)
-        print(table.restaurant_id)
         
 
-
-        q = db.session.query(WorkingDay).filter(WorkingDay.id == 1)
-        wd = q.first()
-        if wd is None:
-            example = WorkingDay()
-            example.restaurant_id = restaurant.id
-            example.work_shifts = [('12:00','15:00'), ('19:00','23:00')]
-            example.day = 1       
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(WorkingDay).filter(WorkingDay.id == 1)
-        wd = q.first()
-        print(wd)
-        print(wd.work_shifts)
-        print(wd.day)
-
-
-        q = db.session.query(Reservation).filter(Reservation.id == 1)
-        r = q.first()
-        if r is None:
-            example = Reservation()
-            example.booker_id = user.id
-            example.restaurant_id = restaurant.id
-            example.table_id = table.id
-            example.date = datetime.datetime(2020, 10, 5)            
-            example.hour =  ('19:00','20:00')
-            example.cancelled = False        
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Reservation).filter(Reservation.id == 1)
-        r = q.first()
-        print(r)
-        print(r.hour)
-        print(r.restaurant_id)
-
-
-        q = db.session.query(Like)
-        l = q.first()
-        if l is None:
-            example = Like()
-            example.liker_id = user.id
-            example.restaurant_id = restaurant.id
-            example.marked = True        
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Like)
-        l = q.first()
-        print(l)
-        print(l.marked)
-        print(l.liker_id)
-
-        q = db.session.query(Seat).filter(Seat.reservation_id == 1, Seat.user_id==1)
-        s = q.first()
-        if s is None:
-            example = Seat()
-            example.reservation_id = r.id
-            example.user_id = user.id
-            example.confirmed = True        
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Seat).filter(Seat.reservation_id == 1, Seat.user_id==1)
-        s = q.first()
-        print(s)
-        print(s.confirmed)
-        print(s.user_id)
-
-
-        q = db.session.query(Review)
-        rev = q.first()
-        if rev is None:
-            example = Review()
-            example.reviewer_id = user.id
-            example.restaurant_id = restaurant.id
-            example.marked = True        
-            example.rating = 2
-            example.comment = "ciao"
-            example.date = datetime.datetime(2002,10,5)
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Review)
-        rev = q.first()
-        print(rev)
-        print(rev.marked)
-        print(rev.comment)
-
-
-        q = db.session.query(Photo).filter(Photo.id == 1)
-        ph = q.first()
-        if ph is None:
-            example = Photo()
-            example.restaurant_id = restaurant.id
-            example.path = 'http://...'
-            example.description = 'abc'
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Photo).filter(Photo.id == 1)
-        ph = q.first()
-        print(ph)
-        print(ph.path)
-        print(ph.restaurant_id)
-
-
-        q = db.session.query(Dishes).filter(Dishes.id == 1)
-        d = q.first()
-        if d is None:
-            example = Dishes()
-            example.restaurant_id = restaurant.id
-            example.price = 1.50
-            example.name = 'pizza'
-            example.ingredients = ('tomato', 'flour')            
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Dishes).filter(Dishes.id == 1)
-        d = q.first()
-        print(d)
-        print(d.name)
-        print(d.ingredients)
-
-        q = db.session.query(Quarantine).filter(Quarantine.user_id == 1)
-        quar = q.first()
-        if quar is None:
-            example = Quarantine()
-            example.user_id = user.id
-            example.start_date = datetime.datetime(2020, 10, 5)            
-            example.end_date = datetime.datetime(2020, 10, 6)            
-            example.active = False
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Quarantine).filter(Quarantine.user_id == 1)
-        quar = q.first()
-        print(quar)
-        print(quar.user_id)
-        print(quar.active)
-
-
-        q = db.session.query(Notification).filter(Notification.user_id == 1)
-        note = q.first()
-        if note is None:
-            example = Notification()
-            example.user_id = user.id
-            example.message = 'You are infected'
-            example.pending = True
-            example.type_ = 0
-            example.date = datetime.datetime(2020, 10, 5)            
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Notification).filter(Notification.user_id == 1)
-        note = q.first()
-        print(note)
-        print(note.user_id)
-        print(note.message)
-        '''
-
+    app.config['WTF_CSRF_ENABLED'] = True
     return app
     
     

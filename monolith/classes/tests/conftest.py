@@ -61,6 +61,9 @@ restaurant_example = {
 def create_restaurant_EP(test_client, data_dict=restaurant_example):
     return test_client.post('/create_restaurant', data=data_dict, follow_redirects=True)
 
+def create_review_EP(test_client, rest_id, data_dict):
+    return test_client.post("/restaurants/"+str(rest_id), data=data_dict, follow_redirects=True)
+
 
 @pytest.fixture
 def test_app():

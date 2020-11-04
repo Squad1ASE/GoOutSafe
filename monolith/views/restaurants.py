@@ -1,9 +1,9 @@
 from flask import Blueprint, redirect, render_template, request, make_response
-from monolith.database import db, Restaurant, Like, WorkingDay, Table, Dish, Seat
+from monolith.database import db, Restaurant, Like, WorkingDay, Table, Dish, Seat, Review, Reservation
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
-from monolith.forms import UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail
+from monolith.forms import UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail, ReviewForm
 from monolith.views import auth
 import datetime
 from flask_wtf import FlaskForm
@@ -97,7 +97,7 @@ def create_restaurant():
                         el.restaurant_id = new_restaurant.id
                         db.session.add(el)
                 db.session.commit()
-
+                
                 return redirect('/restaurants')
 
             else:
@@ -110,12 +110,136 @@ def create_restaurant():
         return make_response(render_template('error.html', message="You are not logged! Redirecting to login page", redirect_url="/login"), 403)
 
 
+@restaurants.route('/restaurants/<restaurant_id>', methods=['GET', 'POST'])
+@login_required
+def restaurant_sheet(restaurant_id):
+    restaurantRecord = db.session.query(Restaurant).filter_by(id = int(restaurant_id)).all()[0]
+
+    reviews = Review.query.filter_by(restaurant_id=int(restaurant_id)).all()
+    ratings = 5
+
+    reservation = Reservation.query.filter_by(booker_id = int(current_user.id)).first()
+
+    # the user has not been at restaurant yet
+    if (reservation is not None and reservation.date > datetime.date.today()):
+        reservation = None
+
+    review = Review.query.filter_by(reviewer_id = int(current_user.id)).filter_by(restaurant_id=restaurant_id).first()
+
+    tableRecords = db.session.query(Table).filter(Table.restaurant_id == restaurant_id)
+
+    cuisinetypes = ""
+    for cuisine in restaurantRecord.cuisine_type:
+        cuisinetypes = cuisinetypes+cuisine.name+" "
+
+    form = ReviewForm()
+
+    if request.method == 'POST':
+
+        # check if the current user is the health_authority
+        if current_user.email == 'healthauthority@ha.com':
+            return make_response(render_template('error.html', message="You are the health authority! Redirecting to home page", redirect_url="/"), 403)
+
+        # check if the current user is the owner
+        if current_user.id == restaurantRecord.owner_id:
+            return make_response(render_template('error.html', message="You are the owner of this restaurant! Redirecting to home page", redirect_url="/"), 403)
+
+        # check if the user has never been at the restaurant 
+        if reservation is None:
+            return make_response(render_template('error.html', message="You have never been at this restaurant! Redirecting to home page", redirect_url="/"), 403)
+
+        # check if the user has already left a review for this restaurant
+        if review is not None:
+            return make_response(render_template('error.html', message="You have already reviewed this restaurant! Redirecting to home page", redirect_url="/"), 403)
+
+
+        if form.validate_on_submit():
+            # add to database
+            new_review = Review()
+            new_review.marked = False
+            new_review.comment = request.form['comment']
+            new_review.rating = request.form['rating']
+            new_review.date = datetime.date.today()
+            new_review.restaurant_id = restaurant_id
+            new_review.reviewer_id = current_user.id
+            db.session.add(new_review)
+            db.session.commit()
+
+            # after the review don't show the possibility to add another review
+            reviews = Review.query.filter_by(restaurant_id=int(restaurant_id)).all()
+            return render_template("restaurantsheet_alreadyreviewed.html", name=restaurantRecord.name, 
+                                                    likes=restaurantRecord.likes, 
+                                                    lat=restaurantRecord.lat, 
+                                                    lon=restaurantRecord.lon, 
+                                                    phone=restaurantRecord.phone,
+                                                    precmeasures=restaurantRecord.prec_measures,
+                                                    cuisinetype=cuisinetypes,
+                                                    totreviews=restaurantRecord.tot_reviews,
+                                                    avgrating=restaurantRecord.avg_rating,
+                                                    tables=tableRecords,
+                                                    base_url="http://127.0.0.1:5000/restaurants/"+restaurant_id,
+                                                    reviews=reviews
+                                                    )
+        
+        else:
+            # invalid form
+            return render_template("restaurantsheet.html", name=restaurantRecord.name, 
+                                                    likes=restaurantRecord.likes, 
+                                                    lat=restaurantRecord.lat, 
+                                                    lon=restaurantRecord.lon, 
+                                                    phone=restaurantRecord.phone,
+                                                    precmeasures=restaurantRecord.prec_measures,
+                                                    cuisinetype=cuisinetypes,
+                                                    totreviews=restaurantRecord.tot_reviews,
+                                                    avgrating=restaurantRecord.avg_rating,
+                                                    ratings=ratings,
+                                                    tables=tableRecords,
+                                                    base_url="http://127.0.0.1:5000/restaurants/"+restaurant_id,
+                                                    form=form,
+                                                    reviews=reviews
+                                                    ), 400
+
+    elif current_user.id == restaurantRecord.owner_id or reservation is None or review is not None or current_user.email == 'healthauthority@ha.com':
+        # get from the owner: don't show the possibility to add a review
+        return render_template("restaurantsheet_alreadyreviewed.html", name=restaurantRecord.name, 
+                                                    likes=restaurantRecord.likes, 
+                                                    lat=restaurantRecord.lat, 
+                                                    lon=restaurantRecord.lon, 
+                                                    phone=restaurantRecord.phone,
+                                                    precmeasures=restaurantRecord.prec_measures,
+                                                    cuisinetype=cuisinetypes,
+                                                    totreviews=restaurantRecord.tot_reviews,
+                                                    avgrating=restaurantRecord.avg_rating,
+                                                    tables=tableRecords,
+                                                    base_url="http://127.0.0.1:5000/restaurants/"+restaurant_id,
+                                                    reviews=reviews
+                                                    ), 555
+    else:
+        # get from a customer
+        return render_template("restaurantsheet.html", name=restaurantRecord.name, 
+                                                    likes=restaurantRecord.likes, 
+                                                    lat=restaurantRecord.lat, 
+                                                    lon=restaurantRecord.lon, 
+                                                    phone=restaurantRecord.phone,
+                                                    precmeasures=restaurantRecord.prec_measures,
+                                                    cuisinetype=cuisinetypes,
+                                                    totreviews=restaurantRecord.tot_reviews,
+                                                    avgrating=restaurantRecord.avg_rating,
+                                                    ratings=ratings,
+                                                    tables=tableRecords,
+                                                    base_url="http://127.0.0.1:5000/restaurants/"+restaurant_id,
+                                                    form=form,
+                                                    reviews=reviews
+                                                    )
+
+
 
 @restaurants.route('/restaurants')
 def _restaurants(message=''):
     allrestaurants = db.session.query(Restaurant)
     return render_template("restaurants.html", message=message, restaurants=allrestaurants, base_url="http://127.0.0.1:5000/restaurants")
 
+'''
 @restaurants.route('/restaurants/<restaurant_id>')
 def restaurant_sheet(restaurant_id):
     restaurantRecord = db.session.query(Restaurant).filter_by(id = int(restaurant_id)).all()[0]
@@ -138,6 +262,7 @@ def restaurant_sheet(restaurant_id):
                                                     tables=tableRecords,
                                                     base_url="http://127.0.0.1:5000/restaurants/"+restaurant_id
                                                     )
+'''
 
 @restaurants.route('/restaurants/<int:restaurant_id>/reservation/<int:table_id>', methods=['GET','POST'])
 @login_required

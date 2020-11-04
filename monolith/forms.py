@@ -132,3 +132,8 @@ class SubReservationPeopleEmail(Form):
 class ReservationPeopleEmail(FlaskForm):
     guest = f.FieldList(f.FormField(SubReservationPeopleEmail), min_entries=1, max_entries=100)
     display = ['guest']
+
+class ReviewForm(FlaskForm):
+    rating = f.IntegerField('Rating', validators=[NumberRange(min=0, max=10)])
+    comment = f.TextAreaField('Comment', validators=[DataRequired()])
+    display = ['rating', 'comment']

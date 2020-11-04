@@ -3,7 +3,7 @@ from monolith.database import db, Restaurant, Like, WorkingDay, Table, Dish, Sea
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
-from monolith.forms import UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail, ReviewForm
+from monolith.forms import UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail, ReviewForm, EditRestaurantForm
 from monolith.views import auth
 import datetime
 from flask_wtf import FlaskForm
@@ -109,6 +109,81 @@ def create_restaurant():
     else:
         return make_response(render_template('error.html', message="You are not logged! Redirecting to login page", redirect_url="/login"), 403)
 
+@restaurants.route('/restaurants')
+def _restaurants(message=''):
+    allrestaurants = db.session.query(Restaurant)
+    return render_template("restaurants.html", message=message, restaurants=allrestaurants, base_url="http://127.0.0.1:5000/restaurants")
+
+@restaurants.route('/restaurants/<int:restaurant_id>/reservation/<int:table_id>', methods=['GET','POST'])
+@login_required
+def reservation(restaurant_id,table_id):
+    # checking if restaurant and table are correct
+    restaurantRecord = db.session.query(Restaurant).filter_by(id = restaurant_id).first()
+    if(restaurantRecord is None):
+        return make_response(render_template('error.html', message="Restaurant doesn't exist", redirect_url="/restaurants"), 404)
+
+    tableRecord = db.session.query(Table).filter_by(id = table_id).first()
+    if(tableRecord is None):
+        return make_response(render_template('error.html', message="Table doesn't exist", redirect_url="/restaurants/"+str(restaurant_id)), 404)
+    
+    class test(FlaskForm):
+        guest = f.FieldList(f.FormField(SubReservationPeopleEmail), min_entries=tableRecord.capacity, max_entries=tableRecord.capacity)
+        display = ['guest']
+    
+    #form = ReservationPeopleEmail()
+    form = test()
+    #print(tableRecord.capacity)
+    #form.capacity = tableRecord.capacity
+
+    if request.method == 'POST':
+
+            if form.validate_on_submit():
+
+                reservation = Reservation()
+                reservation.booker_id = current_user.id
+                reservation.restaurant_id = restaurant_id
+                reservation.table_id = table_id
+                # TODO change date when work shifts available
+                reservation.date = datetime.date(2020, 10, 5)
+                reservation.hour = datetime.date(2020, 10, 5)
+                reservation.cancelled = False
+
+                db.session.add(reservation)
+                db.session.commit()
+                print(reservation.id)
+                for emailField in form.guest.data:
+                    print("DENTRO")
+                    seat = Seat()
+                    seat.reservation_id = reservation.id
+                    seat.guests_email = emailField['email']
+                    seat.confirmed = True
+
+                    db.session.add(seat)
+
+                db.session.commit()
+
+            # this isn't an error
+            return render_template('error.html', message="Reservation has been placed", redirect_url="/")
+                
+    return render_template('reservation.html', form=form)
+
+@restaurants.route('/restaurants/like/<restaurant_id>')
+@login_required
+def _like(restaurant_id):
+    q = Like.query.filter_by(liker_id=current_user.id, restaurant_id=restaurant_id)
+    if q.first() != None:
+        new_like = Like()
+        new_like.liker_id = current_user.id
+        new_like.restaurant_id = restaurant_id
+        db.session.add(new_like)
+        db.session.commit()
+        message = ''
+    else:
+        message = 'You\'ve already liked this place!'
+    return _restaurants(message)
+
+
+#---------- FROM HERE NOT PRESENT IN MASTER
 
 @restaurants.route('/restaurants/<restaurant_id>', methods=['GET', 'POST'])
 @login_required
@@ -232,102 +307,132 @@ def restaurant_sheet(restaurant_id):
                                                     reviews=reviews
                                                     )
 
+@restaurants.route('/edit_restaurant_informations', methods=['GET'])
+def restaurant_informations_edit():
+    if current_user is not None and hasattr(current_user, 'id'):
+
+        restaurants = db.session.query(Restaurant).filter(Restaurant.owner_id == current_user.id)
+        if restaurants.first() is None:
+            print('sono qui')
+            return make_response(render_template('error.html', message="You have not restaurants! Redirecting to create a new one", redirect_url="/create_restaurant"), 403)
+
+        # in a GET I list all my restaurants
+        return render_template("restaurant_informations_edit.html", restaurants=restaurants)
+
+    # user not logged
+    return make_response(render_template('error.html', message="You are not logged! Redirecting to login page", redirect_url="/login"), 403)
 
 
-@restaurants.route('/restaurants')
-def _restaurants(message=''):
-    allrestaurants = db.session.query(Restaurant)
-    return render_template("restaurants.html", message=message, restaurants=allrestaurants, base_url="http://127.0.0.1:5000/restaurants")
+@restaurants.route('/edit_restaurant_informations/<restaurant_id>', methods=['GET','POST'])
+def restaurant_edit(restaurant_id):    
+    if current_user is not None and hasattr(current_user, 'id'):
 
-'''
-@restaurants.route('/restaurants/<restaurant_id>')
-def restaurant_sheet(restaurant_id):
-    restaurantRecord = db.session.query(Restaurant).filter_by(id = int(restaurant_id)).all()[0]
+        record = db.session.query(Restaurant).filter_by(id = int(restaurant_id)).all()[0]        
+        if record is None:
+            return make_response(
+                render_template('error.html', 
+                    message="You have not restaurants! Redirecting to create a new one", 
+                    redirect_url="/create_restaurant"
+                ), 403)
 
-    tableRecords = db.session.query(Table).filter(Table.restaurant_id == restaurant_id)
 
-    cuisinetypes = ""
-    for cuisine in restaurantRecord.cuisine_type:
-        cuisinetypes = cuisinetypes+cuisine.name+" "
+        form = EditRestaurantForm()
 
-    return render_template("restaurantsheet.html", name=restaurantRecord.name, 
-                                                    likes=restaurantRecord.likes, 
-                                                    lat=restaurantRecord.lat, 
-                                                    lon=restaurantRecord.lon, 
-                                                    phone=restaurantRecord.phone,
-                                                    precmeasures=restaurantRecord.prec_measures,
-                                                    cuisinetype=cuisinetypes,
-                                                    totreviews=restaurantRecord.tot_reviews,
-                                                    avgrating=restaurantRecord.avg_rating,
-                                                    tables=tableRecords,
-                                                    base_url="http://127.0.0.1:5000/restaurants/"+restaurant_id
-                                                    )
-'''
-
-@restaurants.route('/restaurants/<int:restaurant_id>/reservation/<int:table_id>', methods=['GET','POST'])
-@login_required
-def reservation(restaurant_id,table_id):
-    # checking if restaurant and table are correct
-    restaurantRecord = db.session.query(Restaurant).filter_by(id = restaurant_id).first()
-    if(restaurantRecord is None):
-        return make_response(render_template('error.html', message="Restaurant doesn't exist", redirect_url="/restaurants"), 404)
-
-    tableRecord = db.session.query(Table).filter_by(id = table_id).first()
-    if(tableRecord is None):
-        return make_response(render_template('error.html', message="Table doesn't exist", redirect_url="/restaurants/"+str(restaurant_id)), 404)
-    
-    class test(FlaskForm):
-        guest = f.FieldList(f.FormField(SubReservationPeopleEmail), min_entries=tableRecord.capacity, max_entries=tableRecord.capacity)
-        display = ['guest']
-    
-    #form = ReservationPeopleEmail()
-    form = test()
-    #print(tableRecord.capacity)
-    #form.capacity = tableRecord.capacity
-
-    if request.method == 'POST':
+        if request.method == 'POST':
+            print('sono nella post')
 
             if form.validate_on_submit():
+                print('sono nella form')
 
-                reservation = Reservation()
-                reservation.booker_id = current_user.id
-                reservation.restaurant_id = restaurant_id
-                reservation.table_id = table_id
-                # TODO change date when work shifts available
-                reservation.date = datetime.date(2020, 10, 5)
-                reservation.hour = datetime.date(2020, 10, 5)
-                reservation.cancelled = False
+                phone_changed = form.data['phone']                
+                #tables_changed = []
+                #tot_capacity_changed = -1
+                dishes_changed = []
+                # check that phone and all tables/dishes fields are correct
+                try:
+                    phone_changed is not None
+                    # the changing of tables changes also the overall capacity
+                    #tables_changed, tot_capacity_changed = _check_tables(form.tables.data)
+                    del form.tables
 
-                db.session.add(reservation)
+                    dishes_changed = _check_dishes(form.dishes.data)
+                    del form.dishes
+                except:
+                    print('errors during acquiring the element of the form')
+                    return make_response(render_template('restaurant_edit.html', form=EditRestaurantForm(), base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id), 400)
+
+                # the try was good, insert changes on a commit of the db
+                try:                   
+                    record.phone = phone_changed
+                    #record.capacity = tot_capacity_changed
+                    #db.session.commit()
+                except:
+                    print('errors in the commit of db')
+                    return make_response(render_template('restaurant_edit.html', form=EditRestaurantForm(), base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id), 400)
+
+                try: 
+                    #tables_to_edit = db.session.query(Table).filter(Table.restaurant_id == int(restaurant_id))
+                    #if tables_to_edit is not None:                    
+                    #    for t in tables_to_edit:
+                    #        db.session.delete(t)
+                    dishes_to_edit = db.session.query(Dish).filter(Dish.restaurant_id == int(restaurant_id))
+                    if dishes_to_edit is not None:    
+                        for d in dishes_to_edit:
+                            db.session.delete(t)
+                    '''
+                    for l in [tables_changed, dishes_changed]:
+                        for el in l:
+                            el.restaurant_id = int(restaurant_id)
+                            db.session.add(el)
+                    '''
+                    for l in dishes_changed:
+                        for el in l:
+                            el.restaurant_id = int(restaurant_id)
+                            db.session.add(el)
+                    #db.session.commit()
+                except:
+                    print('errors in the delete/add/commit of db')
+                    return make_response(render_template('restaurant_edit.html', form=EditRestaurantForm(), base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id), 400)
+
                 db.session.commit()
-                print(reservation.id)
-                for emailField in form.guest.data:
-                    print("DENTRO")
-                    seat = Seat()
-                    seat.reservation_id = reservation.id
-                    seat.guests_email = emailField['email']
-                    seat.confirmed = True
+                return make_response(render_template('error.html', message="You have correctly edited! Redirecting to your restaurants", redirect_url="/edit_restaurant_informations"), 403)
 
-                    db.session.add(seat)
 
-                db.session.commit()
+            else:
+                print('non sono nella form')
+                # invalid form
+                return make_response(render_template('restaurant_edit.html', form=form, base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id), 400)
+        else: 
+            # in the GET we fill all the fields
+            form.phone.data = record.phone
 
-            # this isn't an error
-            return render_template('error.html', message="Reservation has been placed", redirect_url="/")
-                
-    return render_template('reservation.html', form=form)
+            # will not be empty since from the creation of the restaurant at least one table was added            
+            #tables_to_edit = db.session.query(Table).filter(Table.restaurant_id == int(restaurant_id))
+            '''
+            i=0
+            for t in tables_to_edit:
+                form.tables[i].table_name.data = t.table_name
+                #print(t.table_name)
+                form.tables[i].capacity.data = t.capacity
+                #print(t.capacity)
+                i = i+1
+            '''
 
-@restaurants.route('/restaurants/like/<restaurant_id>')
-@login_required
-def _like(restaurant_id):
-    q = Like.query.filter_by(liker_id=current_user.id, restaurant_id=restaurant_id)
-    if q.first() != None:
-        new_like = Like()
-        new_like.liker_id = current_user.id
-        new_like.restaurant_id = restaurant_id
-        db.session.add(new_like)
-        db.session.commit()
-        message = ''
-    else:
-        message = 'You\'ve already liked this place!'
-    return _restaurants(message)
+            # will not be empty since from the creation of the restaurant at least one dish was added
+            dishes_to_edit = db.session.query(Dish).filter(Dish.restaurant_id == int(restaurant_id))
+            i=0
+            for d in dishes_to_edit:
+                form.dishes[i].dish_name.data = d.dish_name
+                form.dishes[i].price.data = d.price
+                form.dishes[i].ingredients.data = d.ingredients
+                i=i+1
+
+            return render_template('restaurant_edit.html', form=form, base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id)
+
+
+    # user not logged
+    return make_response(
+        render_template('error.html', 
+            message="You are not logged! Redirecting to login page", 
+            redirect_url="/login"
+        ), 403)

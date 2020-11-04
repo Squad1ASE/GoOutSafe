@@ -37,7 +37,7 @@ def test_unit_reviews(test_app):
         assert review.restaurant_id == restaurant.id
         assert review.reviewer_id == user.id
 
-def test_component(test_app):
+def test_component_reviews(test_app):
     app, test_client = test_app
     assert create_user_EP(test_client).status_code == 200
     assert user_login_EP(test_client).status_code == 200
@@ -67,11 +67,11 @@ def test_component(test_app):
     # try to review a restaurant when i never been there (403)
     assert create_review_EP(test_client, restaurant.id, review).status_code == 403
 
-    # logout with the owner
+    # logout with the owner (200)
 
-    # login with other user
+    # login with other user (200)
 
-    # create a reservation
+    # create a reservation (200)
 
     # try to send an invalid form (400)
 

@@ -19,7 +19,7 @@ class UserForm(FlaskForm):
     lastname = f.StringField('lastname', validators=[DataRequired()])
     password = f.PasswordField('password', validators=[DataRequired(), Length(1,8)])
     dateofbirth = f.DateField('dateofbirth', format='%d/%m/%Y')
-    display = ['email', 'firstname', 'lastname', 'password', 'dateofbirth']
+    display = ['email', 'phone', 'firstname', 'lastname', 'password', 'dateofbirth']
 
 
 class EditUserForm(FlaskForm):

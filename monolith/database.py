@@ -224,16 +224,18 @@ class Reservation(db.Model):
 
     date = db.Column(db.DateTime)
     hour = db.Column(db.PickleType)
-    cancelled = db.Column(db.Boolean, default=True)
+    cancelled = db.Column(db.Boolean, default=False)
 
 
 class Seat(db.Model):
     __tablename__ = 'seat'
 
-    reservation_id = db.Column(db.Integer, db.ForeignKey('reservation.id'), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+
+    reservation_id = db.Column(db.Integer, db.ForeignKey('reservation.id'))
     reservation = relationship('Reservation', foreign_keys='Seat.reservation_id')
 
-    guests_email = db.Column(db.String, nullable=False, unique=True)  
+    guests_email = db.Column(db.String, nullable=False)  
 
     confirmed = db.Column(db.Boolean, default=True)
 

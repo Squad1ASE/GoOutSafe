@@ -96,7 +96,7 @@ class RestaurantForm(FlaskForm):
     dishes = f.FieldList(f.FormField(DishForm), min_entries=1, max_entries=100)
 
     display = ['name', 'lat', 'lon', 'phone', 'cuisine_type', 'prec_measures', 'avg_time_of_stay']
-
+    
     def validate_workingdays(form, field):
         days_already_added = []
         for wd in field.data:
@@ -104,7 +104,31 @@ class RestaurantForm(FlaskForm):
                 raise ValidationError("There cannot be two working days with the same day")
             else:
                 days_already_added.append(wd['day'])
-
+                
+                
 class GetPatientInformationsForm(FlaskForm):
     email = f.StringField('email', validators=[DataRequired(), Length(1, 64), Email()])
     display = ['email']
+'''
+class ReservationPeopleEmail(FlaskForm):
+    guest = f.FieldList(f.StringField,'guest', min_entries=1, max_entries=100, validators=[DataRequired(), Length(1, 64), Email()])
+    capacity = f.IntegerField('Capacity', validators=[DataRequired(), NumberRange(min=1)])
+    display = ['guest']
+
+
+class GuestForm(Form):
+    """Subform.
+
+    CSRF is disabled for this subform (using `Form` as parent class) because
+    it is never used by itself.
+    """
+    guest = f.StringField('guest', validators=[DataRequired(), Length(1, 64), Email()])
+    capacity = f.IntegerField('Capacity', validators=[DataRequired(), NumberRange(min=1)])
+'''
+
+class SubReservationPeopleEmail(Form):
+    email = f.StringField('email', validators=[Length(10, 64), Email()])
+
+class ReservationPeopleEmail(FlaskForm):
+    guest = f.FieldList(f.FormField(SubReservationPeopleEmail), min_entries=1, max_entries=100)
+    display = ['guest']

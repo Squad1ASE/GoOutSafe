@@ -223,7 +223,6 @@ class Reservation(db.Model):
     table = relationship('Table', foreign_keys='Reservation.table_id')
 
     date = db.Column(db.DateTime)
-    hour = db.Column(db.PickleType)
     cancelled = db.Column(db.Boolean, default=False)
 
 

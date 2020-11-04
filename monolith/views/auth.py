@@ -11,23 +11,26 @@ auth = Blueprint('auth', __name__)
 def login():
     if current_user is not None and hasattr(current_user, 'id'):
         return redirect('/')
-        
-    form = LoginForm()
-    if form.validate_on_submit():
-        email, password = form.data['email'], form.data['password']
-        q = db.session.query(User).filter(User.email == email)
-        user = q.first()
-        
-        if user is not None and user.authenticate(password):
-            login_user(user)
-            return redirect('/')
-        else:
-            form.password.errors.append("Invalid credentials.")
-            return make_response(render_template('login.html', form=form), 401)   
 
-    #return render_template('login.html', form=form)
-    # invalid form
-    return make_response(render_template('login.html', form=form), 400)
+    form = LoginForm()
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            email, password = form.data['email'], form.data['password']
+            q = db.session.query(User).filter(User.email == email)
+            user = q.first()
+        
+            if user is not None and user.authenticate(password):
+                login_user(user)
+                return redirect('/')
+            else:
+                form.password.errors.append("Invalid credentials.")
+                return make_response(render_template('login.html', form=form), 401)  
+
+        else:
+            return make_response(render_template('login.html', form=form), 400)
+
+    return render_template('login.html', form=form)
+    
 
 @auth.route("/logout")
 @login_required

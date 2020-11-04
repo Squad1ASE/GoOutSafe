@@ -25,6 +25,7 @@ def create_app():
     login_manager.init_app(app)
     db.create_all(app=app)
 
+
     with app.app_context():
 
         q = db.session.query(User).filter(User.email == 'admin@admin.com')
@@ -34,6 +35,7 @@ def create_app():
             # test for a user defined in database.db
             example = User()
             example.email = 'admin@admin.com'
+            example.phone = '3333333333'
             example.firstname = 'Admin'
             example.lastname = 'Admin'
             example.set_password('admin')
@@ -49,6 +51,7 @@ def create_app():
             # test for a user defined in database.db
             example = User()
             example.email = 'healthauthority@ha.com'
+            example.phone = '3333333333'
             example.firstname = 'Ha'
             example.lastname = 'Ha'
             example.set_password('ha')
@@ -64,6 +67,7 @@ def create_app():
             # test for a user defined in database.db
             example = User()
             example.email = 'test@test.com'
+            example.phone = '3333333333'
             example.firstname = 'Testfirstname'
             example.lastname = 'Testlastname'
             example.set_password('test')
@@ -91,7 +95,7 @@ def create_app():
             example.lon = 10.408347
 
             example.capacity = 30
-            example.cuisine_type= ['ciao','pippo']
+            example.cuisine_type= [Restaurant.CUISINE_TYPES(1),Restaurant.CUISINE_TYPES(2)]
             example.prec_measures = 'leggeX'
             example.tot_reviews = 2
             example.avg_rating = 2.0

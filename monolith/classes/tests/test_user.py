@@ -1,36 +1,13 @@
 from monolith.database import db, User
-from monolith.classes.tests.conftest import test_app
+from monolith.classes.tests.conftest import test_app, create_user_EP, user_login_EP, edit_user_EP, user_example
 import datetime
 from sqlalchemy import exc
 
-# why test_app doesn't work?
-#class TestUser(unittest.TestCase):
 
-    #test_client = app.test_client()
-    
-user_example_credentials = dict(
-        email='userexample@test.com',
-        firstname='firstname_test',
-        lastname='lastname_test',
-        password='passw',
-        dateofbirth='05/10/2000')
-
-
-def create_user_EP(test_client, data_dict):
-    return test_client.post('/create_user',
-                            data=data_dict, follow_redirects=True)
-
-
-def user_login_EP(test_client, email, password):
-    return test_client.post('/login',
-                            data=dict(email=email,
-                                    password=password),
-                            follow_redirects=True)
-
-
-def populate_User():
+def populate_user():
     new_user = User()
     new_user.email = "newtestinguser@test.com"
+    new_user.phone = '3333333333'
     new_user.firstname = "firstname_test"
     new_user.lastname = "lastname_test"
     new_user.password = "passw"
@@ -42,7 +19,7 @@ def populate_User():
 def test_create_user(test_app):
     app, test_client = test_app
 
-    temp_user_example_dict = user_example_credentials
+    temp_user_example_dict = user_example
 
     # --- UNIT TESTS ---
     with app.app_context():
@@ -51,7 +28,7 @@ def test_create_user(test_app):
         assert getuser is None
 
         # create a new user and check if he has been added
-        new_user = populate_User()
+        new_user = populate_user()
 
         db.session.add(new_user)
         db.session.commit()
@@ -65,44 +42,52 @@ def test_create_user(test_app):
         assert getuser.dateofbirth == datetime.date(2020, 10, 5)
         
         # setting a wrong email syntax
+        count_assert = 0
         try:
             new_user.email = "newuserwrongemail"
-            assert False
         except SyntaxError:
+            count_assert = 1
             assert True
-        except Exception:
-            assert False
+        assert count_assert == 1
 
         # creation of a user with an already existing email must fail
-        new_user_2 = populate_User()
+        new_user_2 = populate_user()
+        count_assert = 0
         try:
             db.session.add(new_user_2)
             db.session.commit()
-            assert False
         except exc.IntegrityError:
+            count_assert = 1
             assert True
-        except Exception:
-            assert False
+        assert count_assert == 1
         
 
     # --- COMPONENTS TESTS ---
-    assert create_user_EP(test_client, temp_user_example_dict).status_code == 200
+    assert test_client.get('/create_user').status_code == 200
+
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
 
     # creation of a user with an already existing email must fail
-    assert create_user_EP(test_client, temp_user_example_dict).status_code ==  403
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code ==  403
 
     # creation of a user with wrong email syntax
     temp_user_example_dict['email'] = 'newuserwrongemail'
-    assert create_user_EP(test_client, temp_user_example_dict).status_code == 400
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 400
 
     # creation of a user with an already existing email must fail (in this case user was added via db.commit)
     temp_user_example_dict['email'] = "newtestinguser@test.com"
-    assert create_user_EP(test_client, temp_user_example_dict).status_code == 403
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 403 
+
+    temp_user_example_dict['email'] = "userexample@test.com"
+    user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password'])
+
+    assert test_client.get('/create_user').status_code == 403
+
 
 def test_login_user(test_app):
     app, test_client = test_app
 
-    temp_user_example_dict = user_example_credentials
+    temp_user_example_dict = user_example
 
     test_client.post('/create_user', data=temp_user_example_dict, follow_redirects=True)
     
@@ -111,7 +96,6 @@ def test_login_user(test_app):
 
         # authentication with correct credentials
         getuser = db.session.query(User).filter(User.email == temp_user_example_dict['email']).first()
-        
         assert getuser is not None
         assert getuser.authenticate(temp_user_example_dict['password']) == True
 
@@ -128,6 +112,9 @@ def test_login_user(test_app):
 
     # --- COMPONENT TESTS ---
 
+    # test get
+    assert test_client.get('/login').status_code == 200
+
     # authentication with wrong email
     assert user_login_EP(test_client, "wrongemail@test.com", temp_user_example_dict['password']).status_code == 401
 
@@ -140,25 +127,123 @@ def test_login_user(test_app):
     # authentication with correct credentials
     assert user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password']).status_code == 200
 
+    # double login
+    assert user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password']).status_code == 200
+
     # creation of a new user when already logged in must fail
     temp_user_example_dict['email'] = 'newtestinguser2@test.com'
-    assert create_user_EP(test_client, temp_user_example_dict).status_code == 403
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 403
 
 
 def test_logout_user(test_app):
     app, test_client = test_app
 
-    temp_user_example_dict = user_example_credentials
+    temp_user_example_dict = user_example
 
-    create_user_EP(test_client, temp_user_example_dict)
+    create_user_EP(test_client, **temp_user_example_dict)
     
     # --- UNIT TESTS --- nothing to be tested as unit
 
     # --- COMPONENT TESTS ---
+    # logout without user logged
+    result = test_client.get('/logout', follow_redirects=True)
+
+    assert result.status_code == 401
+
     result = user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password'])
 
     assert result.status_code == 200
+
     # logout
     result = test_client.get('/logout', follow_redirects=True)
 
     assert result.status_code == 200
+
+
+def test_unit_edit_user(test_app):
+
+    app, test_client = test_app
+
+    temp_user_example_dict = user_example
+    
+    # create a user
+    create_user_EP(test_client, **temp_user_example_dict)
+
+    #--- UNIT TESTS ---
+
+    with app.app_context():
+
+        # modify a user and check if it is modified
+        
+        getuser = db.session.query(User).filter(User.email == temp_user_example_dict['email']).first()
+        
+        getuser.phone = '4444444444'
+        getuser.password = 'newpassw'
+        db.session.commit()
+
+        getuser = db.session.query(User).filter(User.email == temp_user_example_dict['email']).first()
+        
+        assert getuser is not None
+        assert getuser.email == temp_user_example_dict['email']
+        assert getuser.phone == '4444444444'
+        assert getuser.firstname == temp_user_example_dict['firstname']
+        assert getuser.lastname == temp_user_example_dict['lastname']
+        assert getuser.password == "newpassw"
+        assert getuser.dateofbirth == datetime.date(2000, 10, 5)
+        
+
+    #--- COMPONENT TESTS ---
+
+def test_component_user_editing(test_app):
+
+    app, test_client = test_app
+
+    temp_user_example_dict = user_example
+
+    # create a new user
+    create_user_EP(test_client, **temp_user_example_dict)
+
+    # test get without user logged
+    assert test_client.get('/edit_user_informations').status_code == 401
+
+    # test without user logged
+    assert edit_user_EP(test_client, '4444444444', temp_user_example_dict['password'], 'passw').status_code == 401
+
+    # login with a user
+    user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password'])
+
+    # test get with success
+    assert test_client.get('/edit_user_informations').status_code == 200
+    
+    # try to edit the user with success
+    assert edit_user_EP(test_client, '4444444444', temp_user_example_dict['password'], 'newpassw').status_code == 200
+
+    # login with old password
+    assert user_login_EP(test_client, temp_user_example_dict['email'], "passw").status_code == 401
+
+    # login the user with the new password
+    assert user_login_EP(test_client, temp_user_example_dict['email'], "newpassw").status_code == 200
+
+    # try to edit an user with wrong password
+    assert edit_user_EP(test_client, '4444444444', 'wrongp', 'newpassw').status_code == 401
+
+    # try to send an invalid form (password too long)
+    assert edit_user_EP(test_client, '4444444444', 'passwtoolong', 'newpassw').status_code == 400
+
+def test_users_list(test_app):
+
+    app, test_client = test_app
+
+    temp_user_example_dict = user_example
+
+    #assert test_client.get('/users').status_code == 401
+
+    # create a new user
+    create_user_EP(test_client, **temp_user_example_dict)
+
+    # login with a user
+    user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password'])
+
+    assert test_client.get('/users').status_code == 200
+
+

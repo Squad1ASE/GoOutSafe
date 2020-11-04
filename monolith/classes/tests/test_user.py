@@ -42,24 +42,24 @@ def test_create_user(test_app):
         assert getuser.dateofbirth == datetime.date(2020, 10, 5)
         
         # setting a wrong email syntax
+        count_assert = 0
         try:
             new_user.email = "newuserwrongemail"
-            assert False
         except SyntaxError:
+            count_assert = 1
             assert True
-        except Exception:
-            assert False
+        assert count_assert == 1
 
         # creation of a user with an already existing email must fail
         new_user_2 = populate_user()
+        count_assert = 0
         try:
             db.session.add(new_user_2)
             db.session.commit()
-            assert False
         except exc.IntegrityError:
+            count_assert = 1
             assert True
-        except Exception:
-            assert False
+        assert count_assert == 1
         
 
     # --- COMPONENTS TESTS ---

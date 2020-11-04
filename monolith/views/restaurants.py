@@ -1,13 +1,29 @@
 from flask import Blueprint, redirect, render_template, request, make_response
-from monolith.database import db, Restaurant, Like, Table, Dish
+from monolith.database import db, Restaurant, Like, WorkingDay, Table, Dish
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
 from monolith.forms import UserForm
 from monolith.forms import RestaurantForm
 from monolith.views import auth
+import ast
 
 restaurants = Blueprint('restaurants', __name__)
+
+
+def _check_working_days(form_working_days):
+    working_days_to_add = []
+    
+    for wd in form_working_days:
+        new_wd = WorkingDay()
+        str_shifts = '[' + wd['work_shifts'] + ']'
+        shifts = list(ast.literal_eval(str_shifts))
+        new_wd.work_shifts = shifts
+        new_wd.day = wd['day']
+
+        working_days_to_add.append(new_wd)
+
+    return working_days_to_add
 
 
 def _check_tables(form_tables):
@@ -36,7 +52,7 @@ def _check_dishes(form_dishes):
 def create_restaurant():
     if current_user is not None and hasattr(current_user, 'id'):
         
-        form = RestaurantForm()    
+        form = RestaurantForm()
 
         if request.method == 'POST':
 
@@ -46,12 +62,16 @@ def create_restaurant():
                 if any(k in must_not_be_present for k in request.form):
                     return make_response(render_template('create_restaurant.html', form=RestaurantForm()), 400)
 
+                working_days_to_add = []
                 tables_to_add = []
                 dishes_to_add = []
                 new_restaurant = Restaurant()
 
-                # check that all restaurant/tables/dishes fields are correct
+                # check that all restaurant/working days/tables/dishes fields are correct
                 try:
+                    working_days_to_add = _check_working_days(form.workingdays.data)
+                    del form.workingdays
+
                     tables_to_add, tot_capacity = _check_tables(form.tables.data)
                     del form.tables
 
@@ -68,7 +88,7 @@ def create_restaurant():
                 db.session.commit()
 
                 # database check when insert the tables and dishes
-                for l in [tables_to_add, dishes_to_add]:
+                for l in [working_days_to_add, tables_to_add, dishes_to_add]:
                     for el in l:
                         el.restaurant_id = new_restaurant.id
                         db.session.add(el)

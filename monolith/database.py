@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship, validates  # is Object map scheme
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.schema import CheckConstraint
 from enum import Enum
+import time
 
 db = SQLAlchemy()
 
@@ -144,16 +145,56 @@ class Table(db.Model):
 
 class WorkingDay(db.Model):
     __tablename__ = 'working_day'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
-    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'))
+    class WEEK_DAYS(FormEnum):
+        monday = 1
+        tuesday = 2
+        wednesday = 3
+        thursday = 4
+        friday = 5
+        saturday = 6
+        sunday = 7
+
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False, primary_key=True)
     restaurant = relationship('Restaurant', foreign_keys='WorkingDay.restaurant_id')  
 
-    work_shifts = db.Column(db.PickleType)  
+    day = db.Column(db.PickleType, nullable=False, primary_key=True)
+    work_shifts = db.Column(db.PickleType, nullable=False)  
 
-    day = db.Column(db.Integer, db.CheckConstraint('day>=0' and 'day<=6'), nullable=False)  # 0=Mon, 1=Tue, ...
-    # the constraint is on the value of the column
+    @validates('restaurant_id')
+    def validate_restaurant_id(self, key, restaurant_id):
+        if (restaurant_id is None): raise ValueError("restaurant_id is None")
+        if (restaurant_id <= 0): raise ValueError("restaurant_id must be > 0")
+        return restaurant_id
+        
+    @validates('day')
+    def validate_day(self, key, day):
+        if (day is None): raise ValueError("day is None")
+        if not isinstance(day, WorkingDay.WEEK_DAYS): raise ValueError("day is not a WEEK_DAYS")
+        return day
 
+    @validates('work_shifts')
+    def validate_work_shifts(self, key, work_shifts):
+        if (work_shifts is None): raise ValueError("work_shifts is None")
+        if not isinstance(work_shifts, list): raise ValueError("work_shifts is not a list")
+        if (len(work_shifts) == 0): raise ValueError("work_shifts is empty")
+        if (len(work_shifts) > 2): raise ValueError("work_shifts can contains at most two shifts")
+        last = None
+        for shift in work_shifts:
+            if not isinstance(shift, tuple): raise ValueError("work_shifts element is not a list")
+            if (len(shift) != 2): raise ValueError("work_shifts element is not a pair")
+            for hour_to_check in shift:
+                try:
+                    hour = time.strptime(hour_to_check, '%H:%M')
+                    if last is None:
+                        last = hour
+                    else:
+                        if last >= hour:
+                            raise ValueError("work_shifts contains non-incremental times")
+                        last = hour
+                except:
+                    raise ValueError("incorrect format for hour")
+        return work_shifts
 
 # is like a pretty rating implementation
 class Like(db.Model):

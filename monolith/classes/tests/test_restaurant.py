@@ -1,4 +1,4 @@
-from monolith.database import db, User, Restaurant, Table, Dish
+from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish
 from monolith.classes.tests.conftest import test_app, create_user_EP, user_login_EP, create_restaurant_EP
 import json
 from sqlalchemy import exc
@@ -103,14 +103,14 @@ def test_create_restaurant(test_app):
                 capacity = 10, prec_measures = 'leggeX',avg_time_of_stay = 30, tot_reviews = 5, avg_rating = 3.5, likes = 4
             )
         ]
+        count_assert = 0
         for r in incorrect_restaurants:
             try:
                 restaurant = Restaurant(**r)
-                assert False
             except ValueError:
+                count_assert += 1
                 assert True
-            except Exception:
-                assert False
+        assert len(incorrect_restaurants) == count_assert
         
 
         # incorrect restaurants pt2 - incorrect fields or missing mandatory fields
@@ -198,23 +198,23 @@ def test_create_restaurant(test_app):
                 capacity = 10, prec_measures = 'leggeX'
             )
         ]
+        count_assert = 0
         for r in incorrect_restaurants:
             restaurant = Restaurant(**r)
             try:
                 db.session.add(restaurant)
                 db.session.commit()
-                assert False
             except (exc.IntegrityError, exc.InvalidRequestError):
                 db.session.rollback()
+                count_assert += 1
                 assert True
-            except Exception as e:
-                assert False
+        assert len(incorrect_restaurants) == count_assert
 
         #check total restaurants
         restaurants = db.session.query(Restaurant).all()
         assert len(restaurants) == tot_correct_restaurants
         
-    
+
     # --- COMPONENTS TESTS ---
 
     # get and post should fail without login
@@ -232,7 +232,8 @@ def test_create_restaurant(test_app):
         'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
         'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
         'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-        'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+        'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+        'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
     }
     tot_correct_restaurants += 1
     tot_correct_tables += 1
@@ -253,6 +254,14 @@ def test_create_restaurant(test_app):
         assert restaurant_to_check.tot_reviews == 0
         assert restaurant_to_check.avg_rating == 0
         assert restaurant_to_check.likes == 0
+
+        wds = db.session.query(WorkingDay).filter(WorkingDay.restaurant_id == restaurant_to_check.id).all()
+        assert len(wds) == 1
+        wd_to_check = db.session.query(WorkingDay).filter(WorkingDay.restaurant_id == restaurant_to_check.id).filter(WorkingDay.day == WorkingDay.WEEK_DAYS(1)).first()
+        assert wd_to_check is not None
+        assert wd_to_check.restaurant_id  == restaurant_to_check.id 
+        assert wd_to_check.day == WorkingDay.WEEK_DAYS(1)
+        assert wd_to_check.work_shifts == [('12:00','15:00'),('19:00','23:00')]
 
         tables = db.session.query(Table).filter(Table.restaurant_id == restaurant_to_check.id).all()
         assert len(tables) == 1
@@ -280,7 +289,9 @@ def test_create_restaurant(test_app):
         'tables-1-table_name':'green02', 'tables-1-capacity':1, 
         'tables-2-table_name':'blue02', 'tables-2-capacity':11, 
         'dishes-0-dish_name':'pizza02', 'dishes-0-price':4, 'dishes-0-ingredients':'p',
-        'dishes-1-dish_name':'pasta02', 'dishes-1-price':0.1, 'dishes-1-ingredients':'pomodoro,pasta'
+        'dishes-1-dish_name':'pasta02', 'dishes-1-price':0.1, 'dishes-1-ingredients':'pomodoro,pasta',
+        'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-1-day': WorkingDay.WEEK_DAYS(2), 'workingdays-1-work_shifts':"('19:00','23:00')"
     }
     tot_correct_restaurants += 1
     tot_correct_tables += 3
@@ -301,6 +312,19 @@ def test_create_restaurant(test_app):
         assert restaurant_to_check.tot_reviews == 0
         assert restaurant_to_check.avg_rating == 0
         assert restaurant_to_check.likes == 0
+
+        wds = db.session.query(WorkingDay).filter(WorkingDay.restaurant_id == restaurant_to_check.id).all()
+        assert len(wds) == 2
+        wd_to_check = db.session.query(WorkingDay).filter(WorkingDay.restaurant_id == restaurant_to_check.id).filter(WorkingDay.day == WorkingDay.WEEK_DAYS(1)).first()
+        assert wd_to_check is not None
+        assert wd_to_check.restaurant_id  == restaurant_to_check.id 
+        assert wd_to_check.day == WorkingDay.WEEK_DAYS(1)
+        assert wd_to_check.work_shifts == [('12:00','15:00'),('19:00','23:00')]
+        wd_to_check = db.session.query(WorkingDay).filter(WorkingDay.restaurant_id == restaurant_to_check.id).filter(WorkingDay.day == WorkingDay.WEEK_DAYS(2)).first()
+        assert wd_to_check is not None
+        assert wd_to_check.restaurant_id  == restaurant_to_check.id 
+        assert wd_to_check.day == WorkingDay.WEEK_DAYS(2)
+        assert wd_to_check.work_shifts == [('19:00','23:00')]
 
         tables = db.session.query(Table).filter(Table.restaurant_id == restaurant_to_check.id).all()
         assert len(tables) == 3
@@ -335,6 +359,7 @@ def test_create_restaurant(test_app):
         assert dish_to_check.price == 0.1
         assert dish_to_check.ingredients == 'pomodoro,pasta'
 
+
     # incorrect restaurants
     incorrect_restaurants = [
         # fields that must not be present are
@@ -342,31 +367,36 @@ def test_create_restaurant(test_app):
             'owner_id':1, 'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'capacity':1, 'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'tot_reviews':1, 'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'avg_rating':1, 'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'likes':1, 'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         # incorrect restaurant fields
         # name
@@ -374,247 +404,407 @@ def test_create_restaurant(test_app):
             'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':None , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         # lat
         { 
             'name':'Trial01-EP', 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP', 'lat':None, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         # lon
         { 
             'name':'Trial01-EP' , 'lat':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':None, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         # phone
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22,
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':None, 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         # cuisine_type
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':None, 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         # avg_time_of_stay
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX',
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':None,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':14,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':0,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':-1,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         # prec_measures
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':None, 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         # incorrect tables fields
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow',
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':None, 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':None, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':0, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':-1, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         # incorrect dishes fields
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5,
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4,
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':0, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':0, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':-1, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':-1, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':''
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':None, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':None, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':None
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':None,
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         },
         { 
             'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
             'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
             'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
-            'dishes-0-dish_name':None, 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+            'dishes-0-dish_name':None, 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
+        },
+        # incorrect working days fields
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro'
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1)
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': None, 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':None
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': 0, 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': 8, 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':""
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"()"
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00'),('19:00','23:00')"
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"(1,25),('19:00','23:00')"
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('19:00','15:00'),('19:00','23:00')"
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','12:00'),('19:00','23:00')"
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','21:00'),('22:00','23:00')"
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00','16:00'),('19:00','23:00')"
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00'),('19:00','23:00')"
+        },
+        { 
+            'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
+            'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
+            'tables-0-table_name':'yellow', 'tables-0-capacity':5, 
+            'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
+            'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+            'workingdays-1-day': WorkingDay.WEEK_DAYS(1), 'workingdays-1-work_shifts':"('12:00','15:00'),('19:00','23:00')"
         }
     ]
     for r in incorrect_restaurants:

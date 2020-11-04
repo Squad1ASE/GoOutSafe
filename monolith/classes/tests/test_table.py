@@ -47,14 +47,14 @@ def test_insert_table(test_app):
             dict(restaurant_id = restaurant.id, capacity = 1, table_name = None),
             dict(restaurant_id = restaurant.id, capacity = 1, table_name = '')
         ]
+        count_assert = 0
         for t in incorrect_tables:
             try:
                 table = Table(**t)
-                assert False
             except ValueError:
+                count_assert += 1
                 assert True
-            except Exception:
-                assert False
+        assert len(incorrect_tables) == count_assert
 
         # missing fields
         incorrect_tables = [
@@ -62,17 +62,17 @@ def test_insert_table(test_app):
             dict(restaurant_id = restaurant.id, table_name = 'table'),
             dict(restaurant_id = restaurant.id, capacity = 1)
         ]
+        count_assert = 0
         for t in incorrect_tables:
             table = Table(**t)
             try:
                 db.session.add(table)
                 db.session.commit()
-                assert False
             except (exc.IntegrityError, exc.InvalidRequestError):
                 db.session.rollback()
+                count_assert += 1
                 assert True
-            except Exception:
-                assert False
+        assert len(incorrect_tables) == count_assert
 
         # correct tables
         correct_tables = [

@@ -69,6 +69,7 @@ def get_patient_informations():
             #TODO: maybe try catch here is necessary
             db.session.add(quarantine)
             db.session.commit()   
+            # TODO implement contact tracing: retrieve people near the positive one ecc
                 
             # this redirect isn't an error, it display that patient has been successfully marked positive
             return make_response(render_template('error.html', message="Patient marked as positive", redirect_url="/"), 555)     

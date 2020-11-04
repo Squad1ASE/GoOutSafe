@@ -5,6 +5,7 @@ from flask_login import (current_user, login_user, logout_user,
                          login_required)
 from monolith.forms import UserForm
 from monolith.forms import RestaurantForm
+from monolith.forms import EditRestaurantForm
 from monolith.views import auth
 
 restaurants = Blueprint('restaurants', __name__)
@@ -143,3 +144,132 @@ def _like(restaurant_id):
     else:
         message = 'You\'ve already liked this place!'
     return _restaurants(message)
+
+
+@restaurants.route('/edit_restaurant_informations', methods=['GET'])
+def restaurant_informations_edit():
+    if current_user is not None and hasattr(current_user, 'id'):
+
+        restaurants = db.session.query(Restaurant).filter(Restaurant.owner_id == current_user.id)
+        if restaurants.first() is None:
+            print('sono qui')
+            return make_response(render_template('error.html', message="You have not restaurants! Redirecting to create a new one", redirect_url="/create_restaurant"), 403)
+
+        # in a GET I list all my restaurants
+        return render_template("restaurant_informations_edit.html", restaurants=restaurants)
+
+    # user not logged
+    return make_response(render_template('error.html', message="You are not logged! Redirecting to login page", redirect_url="/login"), 403)
+
+
+
+
+
+
+
+@restaurants.route('/edit_restaurant_informations/<restaurant_id>', methods=['GET','POST'])
+def restaurant_edit(restaurant_id):    
+    if current_user is not None and hasattr(current_user, 'id'):
+
+        record = db.session.query(Restaurant).filter_by(id = int(restaurant_id)).all()[0]        
+        if record is None:
+            return make_response(
+                render_template('error.html', 
+                    message="You have not restaurants! Redirecting to create a new one", 
+                    redirect_url="/create_restaurant"
+                ), 403)
+
+
+        form = EditRestaurantForm()
+
+        if request.method == 'POST':
+            print('sono nella post')
+
+            if form.validate_on_submit():
+                print('sono nella form')
+
+                phone_changed = form.data['phone']                
+                tables_changed = []
+                tot_capacity_changed = -1
+                dishes_changed = []
+                # check that phone and all tables/dishes fields are correct
+                try:
+                    phone_changed is not None
+                    # the changing of tables changes also the overall capacity
+                    tables_changed, tot_capacity_changed = _check_tables(form.tables.data)
+                    del form.tables
+
+                    dishes_changed = _check_dishes(form.dishes.data)
+                    del form.dishes
+                except:
+                    print('errors during acquiring the element of the form')
+                    return make_response(render_template('restaurant_edit.html', form=EditRestaurantForm(), base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id), 400)
+
+                # the try was good, insert changes on a commit of the db
+                try:                   
+                    record.phone = phone_changed
+                    record.capacity = tot_capacity_changed
+                    #db.session.commit()
+                except:
+                    print('errors in the commit of db')
+                    return make_response(render_template('restaurant_edit.html', form=EditRestaurantForm(), base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id), 400)
+
+                try: 
+                    tables_to_edit = db.session.query(Table).filter(Table.restaurant_id == int(restaurant_id))
+                    if tables_to_edit is not None:                    
+                        for t in tables_to_edit:
+                            db.session.delete(t)
+                    dishes_to_edit = db.session.query(Dish).filter(Dish.restaurant_id == int(restaurant_id))
+                    if dishes_to_edit is not None:    
+                        for d in dishes_to_edit:
+                            db.session.delete(t)
+
+                    for l in [tables_changed, dishes_changed]:
+                        for el in l:
+                            el.restaurant_id = int(restaurant_id)
+                            db.session.add(el)
+                    #db.session.commit()
+                except:
+                    print('errors in the delete/add/commit of db')
+                    return make_response(render_template('restaurant_edit.html', form=EditRestaurantForm(), base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id), 400)
+
+                db.session.commit()
+                return make_response(render_template('error.html', message="You have correctly edited! Redirecting to your restaurants", redirect_url="/edit_restaurant_informations"), 403)
+
+
+            else:
+                print('non sono nella form')
+                # invalid form
+                return make_response(render_template('restaurant_edit.html', form=form, base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id), 400)
+        else: 
+            # in the GET we fill all the fields
+            form.phone.data = record.phone
+
+            # will not be empty since from the creation of the restaurant at least one table was added            
+            tables_to_edit = db.session.query(Table).filter(Table.restaurant_id == int(restaurant_id))
+            i=0
+            for t in tables_to_edit:
+                form.tables[i].table_name.data = t.table_name
+                #print(t.table_name)
+                form.tables[i].capacity.data = t.capacity
+                #print(t.capacity)
+                i = i+1
+
+            # will not be empty since from the creation of the restaurant at least one dish was added
+            dishes_to_edit = db.session.query(Dish).filter(Dish.restaurant_id == int(restaurant_id))
+            i=0
+            for d in dishes_to_edit:
+                form.dishes[i].dish_name.data = d.dish_name
+                form.dishes[i].price.data = d.price
+                form.dishes[i].ingredients.data = d.ingredients
+                i=i+1
+
+            return render_template('restaurant_edit.html', form=form, base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id)
+
+
+    # user not logged
+    return make_response(
+        render_template('error.html', 
+            message="You are not logged! Redirecting to login page", 
+            redirect_url="/login"
+        ), 403)

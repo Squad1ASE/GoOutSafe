@@ -9,7 +9,6 @@ from monolith.auth import login_manager
 import datetime
 import time
 
-        
 def create_app():
     app = Flask(__name__)
     app.config['WTF_CSRF_SECRET_KEY'] = 'A SECRET KEY'
@@ -25,7 +24,6 @@ def create_app():
     login_manager.init_app(app)
     db.create_all(app=app)
 
-
     with app.app_context():
 
         q = db.session.query(User).filter(User.email == 'admin@admin.com')
@@ -39,9 +37,19 @@ def create_app():
             example.firstname = 'Admin'
             example.lastname = 'Admin'
             example.set_password('admin')
-            example.dateofbirth = datetime.date(2020, 10, 5)            
+            example.dateofbirth = datetime.date(2020, 10, 5)
             example.is_admin = True
+            example.role = 'admin'
             db.session.add(example)
+            '''
+            role = Role()
+            user_roles = UserRoles()
+            role.name = 'admin'
+            db.session.add(role)
+            user_roles.role_id = role.id
+            user_roles.user_id = example.id
+            db.session.add(user_roles)
+            '''
             db.session.commit()
 
         q = db.session.query(User).filter(User.email == 'healthauthority@ha.com')
@@ -57,6 +65,7 @@ def create_app():
             example.set_password('ha')
             example.dateofbirth = datetime.date(2020, 10, 5)            
             example.is_admin = False
+            example.role = 'ha'
             db.session.add(example)
             db.session.commit()
 
@@ -73,6 +82,7 @@ def create_app():
             example.set_password('test')
             example.dateofbirth = datetime.date(2020, 10, 5)            
             example.is_admin = False
+            example.role = 'customer'
             db.session.add(example)
             db.session.commit()
 

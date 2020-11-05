@@ -14,7 +14,6 @@ import ast
 
 restaurants = Blueprint('restaurants', __name__)
 
-
 def _check_working_days(form_working_days):
     working_days_to_add = []
     
@@ -56,6 +55,9 @@ def _check_dishes(form_dishes):
 def create_restaurant():
     if current_user is not None and hasattr(current_user, 'id'):
         
+        if (current_user.role == 'customer' or current_user.role == 'ha'):
+            return make_response(render_template('error.html', message="You are not a restaurant owner! Redirecting to home page", redirect_url="/"), 403)
+
         form = RestaurantForm()
 
         if request.method == 'POST':
@@ -112,7 +114,10 @@ def create_restaurant():
 
 
 @restaurants.route('/restaurants')
+@login_required
 def _restaurants(message=''):
+    if (current_user.role == 'ha'):
+        return make_response(render_template('error.html', message="You are the health authority! Redirecting to home page", redirect_url="/"), 403)
     allrestaurants = db.session.query(Restaurant)
     return render_template("restaurants.html", message=message, restaurants=allrestaurants, base_url="http://127.0.0.1:5000/restaurants")
 
@@ -142,6 +147,10 @@ def restaurant_sheet(restaurant_id):
 @restaurants.route('/restaurants/<int:restaurant_id>/reservation/<int:table_id>', methods=['GET','POST'])
 @login_required
 def reservation(restaurant_id,table_id):
+
+    if (current_user.role == 'owner' or current_user.role == 'ha'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
+
     # checking if restaurant and table are correct
     restaurantRecord = db.session.query(Restaurant).filter_by(id = restaurant_id).first()
     if(restaurantRecord is None):
@@ -195,6 +204,8 @@ def reservation(restaurant_id,table_id):
 @restaurants.route('/restaurants/like/<restaurant_id>')
 @login_required
 def _like(restaurant_id):
+    if (current_user.role == 'owner' or current_user.role == 'ha'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
     q = Like.query.filter_by(liker_id=current_user.id, restaurant_id=restaurant_id)
     if q.first() != None:
         new_like = Like()

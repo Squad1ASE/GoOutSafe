@@ -12,7 +12,8 @@ healthauthority = Blueprint('healthauthority', __name__)
 @healthauthority.route('/patient_informations', methods=['GET','POST'])
 @login_required
 def get_patient_informations():
-    if(current_user.email != "healthauthority@ha.com"):
+    #if(current_user.email != "healthauthority@ha.com"):
+    if (current_user.role != 'ha'):
         return make_response(render_template('error.html', message="Access denied!", redirect_url="/"), 403)
 
     form = GetPatientInformationsForm()

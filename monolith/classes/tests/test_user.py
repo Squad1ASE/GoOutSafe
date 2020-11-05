@@ -12,6 +12,7 @@ def populate_user():
     new_user.lastname = "lastname_test"
     new_user.password = "passw"
     new_user.dateofbirth = datetime.date(2020, 10, 5)
+    new_user.role = "customer"
 
     return new_user
 
@@ -40,11 +41,20 @@ def test_create_user(test_app):
         assert getuser.lastname == "lastname_test"
         assert getuser.password == "passw"
         assert getuser.dateofbirth == datetime.date(2020, 10, 5)
+        assert getuser.role == "customer"
         
         # setting a wrong email syntax
         count_assert = 0
         try:
             new_user.email = "newuserwrongemail"
+        except SyntaxError:
+            count_assert = 1
+            assert True
+        assert count_assert == 1
+
+        count_assert = 0
+        try:
+            new_user.role = "norole"
         except SyntaxError:
             count_assert = 1
             assert True

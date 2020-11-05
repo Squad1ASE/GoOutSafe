@@ -42,6 +42,13 @@ class User(db.Model):
     password = db.Column(db.Unicode(128), nullable=False) 
     dateofbirth = db.Column(db.Date)
 
+    role = db.Column(db.String, nullable=False) 
+    @validates('role')
+    def validate_role(self, key, user):
+        if(user == 'admin' or user == 'customer' or user == 'owner' or user == 'ha'):
+            return user
+        raise SyntaxError('Wrong role assignment')
+
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)
     is_anonymous = False

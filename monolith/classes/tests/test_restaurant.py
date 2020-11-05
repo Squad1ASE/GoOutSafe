@@ -29,8 +29,9 @@ def test_create_restaurant(test_app):
 
     # --- UNIT TESTS ---
     with app.app_context():
+
         # create a user for testing the restaurant creation
-        assert create_user_EP(test_client, email='userexamplerestaurant@test.com', password='passw').status_code == 200
+        assert create_user_EP(test_client, email='userexamplerestaurant@test.com', password='passw', role='owner').status_code == 200
         user_test = db.session.query(User).filter(User.email == 'userexamplerestaurant@test.com').first()
         assert user_test is not None
         user_test_id = user_test.id
@@ -219,6 +220,7 @@ def test_create_restaurant(test_app):
 
     # get and post should fail without login
     assert test_client.get('/create_restaurant', follow_redirects=True).status_code == 403
+
     assert create_restaurant_EP(test_client, dict()).status_code == 403 
 
     # authentication with correct credentials 
@@ -822,3 +824,24 @@ def test_create_restaurant(test_app):
 
         dishes = db.session.query(Dish).all()
         assert len(dishes) == tot_correct_dishes
+
+    # logout with the user
+    assert test_client.get('/logout', follow_redirects=True).status_code == 200
+
+    assert create_user_EP(test_client, email='userexamplecustomer@test.com', password='passw', role='customer').status_code == 200
+    assert user_login_EP(test_client, 'userexamplecustomer@test.com', 'passw').status_code == 200
+    # get with a customer
+    assert test_client.get('/create_restaurant', follow_redirects=True).status_code == 403
+
+    # logout with the user
+    assert test_client.get('/logout', follow_redirects=True).status_code == 200
+    assert create_user_EP(test_client, email='ha@test.com', password='passw', role='ha').status_code == 200
+    assert user_login_EP(test_client, 'ha@test.com', 'passw').status_code == 200
+    assert test_client.get('/restaurants', follow_redirects=True).status_code == 403
+
+    with app.app_context():
+        user = db.session.query(User).filter_by(email='userexamplerestaurant@test.com').first()
+        tmp_rest = db.session.query(Restaurant).filter_by(owner_id=user.id).first()
+        assert tmp_rest is not None
+    # like with health_authority
+    assert test_client.get('/restaurants/like/'+str(tmp_rest.id), follow_redirects=True).status_code == 403

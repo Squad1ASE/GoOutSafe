@@ -14,7 +14,8 @@ def test_mark_positive(test_app):
         firstname='Ha',
         lastname='Ha',
         password='ha',
-        dateofbirth='05/10/2000'
+        dateofbirth='05/10/2000',
+        role='ha'
     )
     temp_user_example_dict = user_example
     assert create_user_EP(test_client, **temp_ha_dict).status_code == 200 
@@ -66,7 +67,8 @@ def test_component_health_authority(test_app):
         firstname='Ha',
         lastname='Ha',
         password='ha',
-        dateofbirth='05/10/2000'
+        dateofbirth='05/10/2000',
+        role='ha'
     )
     temp_user_example_dict = user_example
     assert create_user_EP(test_client, **temp_ha_dict).status_code == 200 

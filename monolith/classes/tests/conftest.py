@@ -13,12 +13,14 @@ user_example = dict(
     firstname='firstname_test',
     lastname='lastname_test',
     password='passw',
-    dateofbirth='05/10/2000'
+    dateofbirth='05/10/2000',
+    role="customer"
 )
 
 def create_user_EP(
         test_client, email=user_example['email'], phone=user_example['phone'],firstname=user_example['firstname'], 
-        lastname=user_example['lastname'], password=user_example['password'], dateofbirth=user_example['dateofbirth']
+        lastname=user_example['lastname'], password=user_example['password'], dateofbirth=user_example['dateofbirth'],
+        role=user_example['role']
     ):
     data = dict(
         email=email,
@@ -26,7 +28,8 @@ def create_user_EP(
         firstname=firstname,
         lastname=lastname,
         password=password,
-        dateofbirth=dateofbirth
+        dateofbirth=dateofbirth,
+        role=role
     )
     return test_client.post('/create_user', data=data, follow_redirects=True)
 

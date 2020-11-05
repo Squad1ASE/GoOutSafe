@@ -10,7 +10,7 @@
       <h2>Menu:  </h2> 
       {% for dish in dishes%}
       <ul>
-        <h4>{{dish.dish_name}}      {{dish.price}}      {{dish.ingredients}}</h4> 
+        <h4>Dish: {{dish.dish_name}}      Price: {{dish.price}}      ingredients: {{dish.ingredients}}</h4> 
       </ul>
       {% endfor %}
       <ul>
@@ -20,6 +20,7 @@
 
       {% endif %}
     </ul>
+    <h2>Make a reservation:</h2> 
     {{state_message}}
     <form action="" method="POST">
       {{ form.hidden_tag() }}

@@ -1133,3 +1133,36 @@ def test_restaurant_reservation_as_positive(test_app):
         reservation_guests_number_example[0],
         dict()
     ).status_code == 222
+
+def test_restaurant_search(test_app):
+    app, test_client = test_app
+
+    # create customers
+    for user in customers_example:
+        create_user_EP(test_client,**user)
+
+    # create restaurant owners
+    for ro in restaurant_owner_example:
+        create_user_EP(test_client,**ro)
+
+    for usr_idx,restaurant in enumerate(restaurant_example):
+        user_login_EP(test_client, restaurant_owner_example[usr_idx]['email'], 
+                                    restaurant_owner_example[usr_idx]['password'])
+
+        create_restaurant_EP(test_client,restaurant)
+
+        user_logout_EP(test_client)
+
+    # log as customer 1
+    user_login_EP(test_client, customers_example[0]['email'], 
+                                customers_example[0]['password'])
+
+    assert test_client.get('/restaurants/search', follow_redirects=True).status_code == 200
+
+    filter = dict()
+    filter['name'] = "Restaurant"
+    filter['lat'] = "50"
+    filter['lon'] = "50"
+    filter['cuisine_type'] = [1,2]
+
+    assert test_client.post('/restaurants/search', data=filter, follow_redirects=True).status_code == 200

@@ -3,7 +3,7 @@ from monolith.database import db, Restaurant, Like, WorkingDay, Table, Dish, Sea
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
-from monolith.forms import UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail, ReservationRequest
+from monolith.forms import UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail, ReservationRequest, RestaurantSearch
 from monolith.views import auth
 import datetime
 from flask_wtf import FlaskForm
@@ -14,6 +14,7 @@ import ast
 import time
 from time import mktime
 from datetime import timedelta
+from sqlalchemy import or_
 
 restaurants = Blueprint('restaurants', __name__)
 
@@ -322,3 +323,55 @@ def _like(restaurant_id):
     else:
         message = 'You\'ve already liked this place!'
     return _restaurants(message)
+
+
+@restaurants.route('/restaurants/search', methods=['GET', 'POST'])
+@login_required
+def search():
+
+    form = RestaurantSearch()
+
+    if request.method == 'POST':
+
+        if form.validate_on_submit():
+            
+            cuisine_type_list = []
+            for cuisine in form.cuisine_type.data:
+                #cuisine_type_list.append(Restaurant.CUISINE_TYPES(cuisine))
+                cuisine_type_list.append(cuisine)
+
+
+            allrestaurants = db.session.query(Restaurant)
+
+            if 'name' in request.form:
+                allrestaurants = allrestaurants.filter(Restaurant.name.ilike(r"%{}%".format(request.form['name'])))
+            if 'lat' in request.form and request.form['lat'] != '':
+                allrestaurants = allrestaurants.filter(Restaurant.lat >= (float(request.form['lat'])-0.1), Restaurant.lat <= (float(request.form['lat'])+0.1))
+            if 'lon' in request.form and request.form['lon'] != '':
+                allrestaurants = allrestaurants.filter(Restaurant.lon >= (float(request.form['lon'])-0.1), Restaurant.lon <= (float(request.form['lon'])+0.1))
+            
+            allrestaurants_list = allrestaurants
+
+            if len(cuisine_type_list) >= 1:
+
+                allrestaurants_list = []
+                for restaurant in allrestaurants.all():
+
+                    for restaurant_cuisine in restaurant.cuisine_type:
+                        
+                        if(restaurant_cuisine in cuisine_type_list):
+                            allrestaurants_list.append(restaurant)
+                            break
+
+            '''
+                allrestaurants = allrestaurants.filter(
+                    or_(*[Restaurant.cuisine_type == x for x in cuisine_type_list])
+                )
+            print(allrestaurants)
+            #print(request.form['cuisine_type'])
+            '''
+
+            return render_template('restaurantsearch.html', form=form, restaurants=allrestaurants_list, restlon=10.4015256, restlat=43.7176589)
+
+    
+    return render_template('restaurantsearch.html', form=form)

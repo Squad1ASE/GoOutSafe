@@ -1,8 +1,11 @@
-from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish
+from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Reservation
 from monolith.classes.tests.conftest import test_app
-from monolith.utilities import create_user_EP, user_login_EP, create_restaurant_EP
+from monolith.utilities import create_user_EP, user_login_EP, user_logout_EP, create_restaurant_EP, customers_example, restaurant_example, restaurant_owner_example
+from monolith.utilities import reservation_times_example, reservation_guests_number_example, reservation_guests_email_example, restaurant_reservation_EP, reservation_dates_example
+from monolith.utilities import restaurant_reservation_GET_EP, restaurant_reservation_POST_EP
 import json
 from sqlalchemy import exc
+import datetime
 
 
 def check_restaurants(restaurant_to_check, restaurant):
@@ -823,3 +826,132 @@ def test_create_restaurant(test_app):
 
         dishes = db.session.query(Dish).all()
         assert len(dishes) == tot_correct_dishes
+
+
+
+
+
+
+
+
+
+
+
+def test_restaurant(test_app):
+    app, test_client = test_app
+
+    # create customers
+    for user in customers_example:
+        create_user_EP(test_client,**user)
+
+    # create restaurant owners
+    for ro in restaurant_owner_example:
+        create_user_EP(test_client,**ro)
+
+    for usr_idx,restaurant in enumerate(restaurant_example):
+        user_login_EP(test_client, restaurant_owner_example[usr_idx]['email'], 
+                                    restaurant_owner_example[usr_idx]['password'])
+
+        create_restaurant_EP(test_client,restaurant)
+
+        user_logout_EP(test_client)
+
+    # log as customer 1
+    user_login_EP(test_client, customers_example[0]['email'], 
+                                customers_example[0]['password'])
+ 
+    restaurant_id = ['1','2','3','4']
+
+    # visit the first restaurant informations
+    result = test_client.get('/restaurants/'+restaurant_id[2], follow_redirects=True)
+
+    assert result.status_code == 200
+    
+    # look for a table to reserve on a day when the restaurant is closed
+    assert restaurant_reservation_EP(
+        test_client,
+        restaurant_id[3],
+        reservation_dates_example[0],
+        reservation_times_example[0], 
+        reservation_guests_number_example[2]
+    ).status_code == 333
+    
+    # look for a table to reserve on a day on which the restaurant works but at a time when it is closed
+    assert restaurant_reservation_EP(
+        test_client,
+        restaurant_id[3],
+        reservation_dates_example[1],
+        reservation_times_example[0], 
+        reservation_guests_number_example[2]
+    ).status_code == 444
+
+    # look for a table to reserve on a day on which the restaurant works at a time when it is open but with a no table for the number of guests 
+    assert restaurant_reservation_EP(
+        test_client,
+        restaurant_id[3],
+        reservation_dates_example[1],
+        reservation_times_example[14], 
+        reservation_guests_number_example[4]
+    ).status_code == 555
+    
+    # look for a table to reserve on a day on which the restaurant works at a time when it is open and there are tables available
+    assert restaurant_reservation_EP(
+        test_client,
+        restaurant_id[3],
+        reservation_dates_example[1],
+        reservation_times_example[14], 
+        reservation_guests_number_example[3]
+    ).status_code == 200
+
+    # look for a table to reserve on a day on which the restaurant works at a time when it is open and there are tables available
+    # checking correctness of guests page with form   
+    reservation_date_str = reservation_dates_example[1] + " " + reservation_times_example[14]
+    assert restaurant_reservation_GET_EP(
+        test_client,
+        restaurant_id[3],
+        8,
+        reservation_date_str,
+        reservation_guests_number_example[3]
+    ).status_code == 200
+
+    # placing a reservation
+    reservation_date_str = reservation_dates_example[1] + " " + reservation_times_example[14]
+    reservation_datetime = datetime.datetime.strptime(reservation_date_str, "%d/%m/%Y %H:%M")
+    '''
+    list_of_guests_email = []
+    for i in range(reservation_guests_number_example[3]):
+        temp_dict = dict(email=reservation_guests_email_example[i])
+        list_of_guests_email.append(temp_dict)
+
+    list_of_guests_email_str = str(list_of_guests_email)
+    test_dict = {
+        'guest-0-email':'guestemail1@test.com',
+        'guest-1-email':'guestemail2@test.com',
+        'guest-2-email':'guestemail3@test.com',
+        'guest-3-email':'guestemail4@test.com'
+    }
+    '''
+    guests_email_dict = dict()
+    for i in range(reservation_guests_number_example[3]):
+        key = 'guest-'+str(i)+'-email'
+        guests_email_dict[key] = reservation_guests_email_example[i]
+
+        
+    assert restaurant_reservation_POST_EP(
+        test_client,
+        restaurant_id[3],
+        8,
+        reservation_date_str,
+        reservation_guests_number_example[3],
+        guests_email_dict
+    ).status_code == 666
+
+    
+    with app.app_context():
+        # checking via db if reservation has been added
+        assert db.session.query(Reservation).filter(
+            Reservation.restaurant_id ==restaurant_id[3],
+            Reservation.table_id == 8, 
+            Reservation.date == reservation_datetime
+        ).first() is not None
+    

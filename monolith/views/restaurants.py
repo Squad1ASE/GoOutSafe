@@ -127,6 +127,10 @@ def restaurant_sheet(restaurant_id):
     for cuisine in restaurantRecord.cuisine_type:
         cuisinetypes = cuisinetypes+cuisine.name+" "
 
+    # get menu
+    restaurant_menu = db.session.query(Dish).filter_by(restaurant_id = restaurant_id)
+
+
     form = ReservationRequest()
 
     data_dict = dict(name=restaurantRecord.name, 
@@ -138,7 +142,7 @@ def restaurant_sheet(restaurant_id):
                                                     cuisinetype=cuisinetypes,
                                                     totreviews=restaurantRecord.tot_reviews,
                                                     avgrating=restaurantRecord.avg_rating,
-                                                    base_url="http://127.0.0.1:5000/restaurants/"+restaurant_id,
+                                                    dishes=restaurant_menu,
                                                     form=form)
 
 
@@ -151,11 +155,11 @@ def restaurant_sheet(restaurant_id):
                     # 4 check in the remaining tables if there is at least one that has more or equals seats then the required
                     
                     weekday = form.date.data.weekday() + 1
-                    
                     workingday = db.session.query(WorkingDay).filter(WorkingDay.restaurant_id == int(restaurant_id)).filter(WorkingDay.day == WorkingDay.WEEK_DAYS(weekday)).first()
+                    
                     if workingday is None:
-                        return render_template('restaurantsheet.html', **data_dict, state_message="Restaurant isn't open this day")
-                
+                        return make_response(render_template('restaurantsheet.html', **data_dict, state_message="Restaurant isn't open this day"), 333)
+                    
                     time_span = False
                     reservation_time = time.strptime(request.form['time'], '%H:%M')
                     for shift in workingday.work_shifts:
@@ -169,7 +173,7 @@ def restaurant_sheet(restaurant_id):
                             print("except")
 
                     if time_span is False:
-                            return make_response(render_template('restaurantsheet.html', **data_dict, state_message="Restaurant isn't open at this hour"), 400)
+                            return make_response(render_template('restaurantsheet.html', **data_dict, state_message="Restaurant isn't open at this hour"), 444)
 
                     table_records = db.session.query(Table).filter(
                             Table.restaurant_id == int(restaurant_id),
@@ -177,7 +181,7 @@ def restaurant_sheet(restaurant_id):
                         ).all()
 
                     if len(table_records) == 0:
-                            return make_response(render_template('restaurantsheet.html', **data_dict, state_message="There are no table with this capacity"), 400)
+                            return make_response(render_template('restaurantsheet.html', **data_dict, state_message="There are no table with this capacity"), 555)
 
                     reservation_datetime_str = str(request.form['date']) + " " + str(request.form['time'])
                     reservation_datetime = datetime.datetime.strptime(reservation_datetime_str, "%d/%m/%Y %H:%M")
@@ -202,7 +206,7 @@ def restaurant_sheet(restaurant_id):
                             table_id_reservation = table.id
                             break
 
-                        
+
                     if table_id_reservation is None:
                             return make_response(render_template('restaurantsheet.html', **data_dict, state_message="No table available for this amount of people at this time"), 404)
                     else:
@@ -224,6 +228,8 @@ def reservation(restaurant_id):
     #guests = int(request.get('guests'))
 
     # checking if restaurant and table are correct
+    # TODO maybe this part could be removed, I did it before removing access to table to the users
+    '''
     restaurantRecord = db.session.query(Restaurant).filter_by(id = restaurant_id).first()
     if(restaurantRecord is None):
         return make_response(render_template('error.html', message="Restaurant doesn't exist", redirect_url="/restaurants"), 404)
@@ -231,7 +237,7 @@ def reservation(restaurant_id):
     tableRecord = db.session.query(Table).filter_by(id = table_id).first()
     if(tableRecord is None):
         return make_response(render_template('error.html', message="Table doesn't exist", redirect_url="/restaurants/"+str(restaurant_id)), 404)
-    
+    '''
     class test(FlaskForm):
         guest = f.FieldList(f.FormField(SubReservationPeopleEmail), min_entries=guests, max_entries=guests)
         display = ['guest']
@@ -285,8 +291,8 @@ def reservation(restaurant_id):
 
                 db.session.commit()
 
-            # this isn't an error
-            return render_template('error.html', message="Reservation has been placed", redirect_url="/")
+                # this isn't an error
+                return make_response(render_template('error.html', message="Reservation has been placed", redirect_url="/"), 666)
                 
     return render_template('reservation.html', form=form)
 

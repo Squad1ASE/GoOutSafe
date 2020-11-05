@@ -50,6 +50,7 @@ def create_app():
             db.session.add(example)
             db.session.commit()
 
+    
 
     test_client = app.test_client()
 
@@ -69,6 +70,9 @@ def create_app():
         
 
     app.config['WTF_CSRF_ENABLED'] = True
+
+    
+
     return app
     
     

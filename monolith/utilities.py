@@ -1,58 +1,5 @@
 from monolith.database import Restaurant, WorkingDay
 import datetime
-# --- UTILITIES RESTAURANT  ---
-restaurant_example = [
-    { 
-        'name':'Restaurant 1', 'lat':43.7216621, 'lon':10.4083723, 'phone':'111111', 
-        'cuisine_type':[Restaurant.CUISINE_TYPES(1),Restaurant.CUISINE_TYPES(6)], 'prec_measures':'leggeX', 'avg_time_of_stay':15,
-        'tables-0-table_name':'res1red', 'tables-0-capacity':2, 
-        'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro, mozzarella',
-        'dishes-1-dish_name':'pasta agli scampi', 'dishes-1-price':4, 'dishes-1-ingredients':'pasta, scampi',
-        'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-1-day': WorkingDay.WEEK_DAYS(2), 'workingdays-1-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-2-day': WorkingDay.WEEK_DAYS(3), 'workingdays-2-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-3-day': WorkingDay.WEEK_DAYS(4), 'workingdays-3-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-4-day': WorkingDay.WEEK_DAYS(5), 'workingdays-4-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-5-day': WorkingDay.WEEK_DAYS(6), 'workingdays-5-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-6-day': WorkingDay.WEEK_DAYS(7), 'workingdays-6-work_shifts':"('12:00','15:00'),('19:00','23:00')"
-    },
-    { 
-        'name':'Restaurant 2', 'lat':43.7176394, 'lon':10.4032292, 'phone':'222222', 
-        'cuisine_type':[Restaurant.CUISINE_TYPES(1),Restaurant.CUISINE_TYPES(3)], 'prec_measures':'leggeX', 'avg_time_of_stay':25,
-        'tables-0-table_name':'res2red', 'tables-0-capacity':6, 
-        'tables-1-table_name':'res2blue', 'tables-1-capacity':4, 
-        'dishes-0-dish_name':'pasta al pesto', 'dishes-0-price':4, 'dishes-0-ingredients':'pasta, pesto, basilico',
-        'dishes-1-dish_name':'burrito', 'dishes-1-price':3, 'dishes-1-ingredients':'carne,fagioli',
-        'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-1-day': WorkingDay.WEEK_DAYS(2), 'workingdays-1-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-2-day': WorkingDay.WEEK_DAYS(3), 'workingdays-2-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-3-day': WorkingDay.WEEK_DAYS(4), 'workingdays-3-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-4-day': WorkingDay.WEEK_DAYS(5), 'workingdays-4-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-5-day': WorkingDay.WEEK_DAYS(6), 'workingdays-5-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-6-day': WorkingDay.WEEK_DAYS(7), 'workingdays-6-work_shifts':"('12:00','15:00'),('19:00','23:00')"
-    },
-    { 
-        'name':'Restaurant 3', 'lat':43.7176589, 'lon':10.4015256, 'phone':'333333', 
-        'cuisine_type':[Restaurant.CUISINE_TYPES(2)], 'prec_measures':'leggeX', 'avg_time_of_stay':40,
-        'tables-0-table_name':'res3green', 'tables-0-capacity':4, 
-        'tables-1-table_name':'res3red', 'tables-1-capacity':4, 
-        'tables-2-table_name':'res3blue', 'tables-2-capacity':6, 
-        'tables-3-table_name':'res3yellow', 'tables-3-capacity':10, 
-        'dishes-0-dish_name':'riso', 'dishes-0-price':4, 'dishes-0-ingredients':'funghi',
-        'workingdays-0-day': WorkingDay.WEEK_DAYS(2), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-1-day': WorkingDay.WEEK_DAYS(3), 'workingdays-1-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-2-day': WorkingDay.WEEK_DAYS(4), 'workingdays-2-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-3-day': WorkingDay.WEEK_DAYS(5), 'workingdays-3-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-4-day': WorkingDay.WEEK_DAYS(6), 'workingdays-4-work_shifts':"('12:00','15:00'),('19:00','23:00')",
-        'workingdays-5-day': WorkingDay.WEEK_DAYS(7), 'workingdays-5-work_shifts':"('12:00','15:00'),('19:00','23:00')"
-    }
-]
-
-# recall: to call this function you must be logged in
-def create_restaurant_EP(test_client, data_dict=restaurant_example[0]):
-    return test_client.post('/create_restaurant', data=data_dict, follow_redirects=True)
-
-
 # --- UTILITIES USER ---
 # customers
 customers_example = [
@@ -79,8 +26,53 @@ customers_example = [
         lastname='lastname_test3',
         password='passw3',
         dateofbirth='05/10/2003'
+    ),
+    dict(
+        email='userexample4@test.com',
+        phone='39444444',
+        firstname='firstname_test4',
+        lastname='lastname_test4',
+        password='passw4',
+        dateofbirth='05/10/2004'
     )
 ]       
+
+# restaurant owner
+restaurant_owner_example = [
+    dict(
+        email='restaurantowner1@test.com',
+        phone='40111111',
+        firstname='owner_firstname_test1',
+        lastname='owner_lastname_test1',
+        password='passw1',
+        dateofbirth='05/10/2001'
+    ),
+    dict(
+        email='restaurantowner2@test.com',
+        phone='40222222',
+        firstname='owner_firstname_test2',
+        lastname='owner_lastname_test2',
+        password='passw2',
+        dateofbirth='05/10/2002'
+    ),
+    dict(
+        email='restaurantowner3@test.com',
+        phone='40333333',
+        firstname='owner_firstname_test3',
+        lastname='owner_lastname_test3',
+        password='passw3',
+        dateofbirth='05/10/2003'
+    ),
+    dict(
+        email='restaurantowner4@test.com',
+        phone='40444444',
+        firstname='owner_firstname_test4',
+        lastname='owner_lastname_test4',
+        password='passw4',
+        dateofbirth='05/10/2004'
+    )
+]       
+
 # health authority
 health_authority_example = dict(
     email='healthauthority@ha.com',
@@ -135,3 +127,204 @@ def edit_user_EP(
     )
     return test_client.post('/edit_user_informations', data=data, follow_redirects=True)
 
+
+# --- UTILITIES RESTAURANT  ---
+restaurant_example = [
+    { 
+        'name':'Restaurant 1', 'lat':43.7216621, 'lon':10.4083723, 'phone':'111111', 
+        'cuisine_type':[Restaurant.CUISINE_TYPES(1),Restaurant.CUISINE_TYPES(6)], 'prec_measures':'leggeX', 'avg_time_of_stay':15,
+        'tables-0-table_name':'res1red', 'tables-0-capacity':2, 
+        'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro, mozzarella',
+        'dishes-1-dish_name':'pasta agli scampi', 'dishes-1-price':4, 'dishes-1-ingredients':'pasta, scampi',
+        'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-1-day': WorkingDay.WEEK_DAYS(2), 'workingdays-1-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-2-day': WorkingDay.WEEK_DAYS(3), 'workingdays-2-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-3-day': WorkingDay.WEEK_DAYS(4), 'workingdays-3-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-4-day': WorkingDay.WEEK_DAYS(5), 'workingdays-4-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-5-day': WorkingDay.WEEK_DAYS(6), 'workingdays-5-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-6-day': WorkingDay.WEEK_DAYS(7), 'workingdays-6-work_shifts':"('12:00','15:00'),('19:00','23:00')"
+    },
+    { 
+        'name':'Restaurant 2', 'lat':43.7176394, 'lon':10.4032292, 'phone':'222222', 
+        'cuisine_type':[Restaurant.CUISINE_TYPES(1),Restaurant.CUISINE_TYPES(3)], 'prec_measures':'leggeX', 'avg_time_of_stay':25,
+        'tables-0-table_name':'res2red', 'tables-0-capacity':6, 
+        'tables-1-table_name':'res2blue', 'tables-1-capacity':4, 
+        'dishes-0-dish_name':'pasta al pesto', 'dishes-0-price':4, 'dishes-0-ingredients':'pasta, pesto, basilico',
+        'dishes-1-dish_name':'burrito', 'dishes-1-price':3, 'dishes-1-ingredients':'carne,fagioli',
+        'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-1-day': WorkingDay.WEEK_DAYS(2), 'workingdays-1-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-2-day': WorkingDay.WEEK_DAYS(3), 'workingdays-2-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-3-day': WorkingDay.WEEK_DAYS(4), 'workingdays-3-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-4-day': WorkingDay.WEEK_DAYS(5), 'workingdays-4-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-5-day': WorkingDay.WEEK_DAYS(6), 'workingdays-5-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-6-day': WorkingDay.WEEK_DAYS(7), 'workingdays-6-work_shifts':"('12:00','15:00'),('19:00','23:00')"
+    },
+    { 
+        'name':'Restaurant 3', 'lat':43.7176589, 'lon':10.4015256, 'phone':'333333', 
+        'cuisine_type':[Restaurant.CUISINE_TYPES(2)], 'prec_measures':'leggeX', 'avg_time_of_stay':40,
+        'tables-0-table_name':'res3green', 'tables-0-capacity':4, 
+        'tables-1-table_name':'res3red', 'tables-1-capacity':4, 
+        'tables-2-table_name':'res3blue', 'tables-2-capacity':6, 
+        'tables-3-table_name':'res3yellow', 'tables-3-capacity':10, 
+        'dishes-0-dish_name':'riso', 'dishes-0-price':4, 'dishes-0-ingredients':'funghi',
+        'workingdays-0-day': WorkingDay.WEEK_DAYS(2), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-1-day': WorkingDay.WEEK_DAYS(3), 'workingdays-1-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-2-day': WorkingDay.WEEK_DAYS(4), 'workingdays-2-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-3-day': WorkingDay.WEEK_DAYS(5), 'workingdays-3-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-4-day': WorkingDay.WEEK_DAYS(6), 'workingdays-4-work_shifts':"('12:00','15:00'),('19:00','23:00')",
+        'workingdays-5-day': WorkingDay.WEEK_DAYS(7), 'workingdays-5-work_shifts':"('12:00','15:00'),('19:00','23:00')"
+    },
+    { 
+        'name':'Restaurant 4', 'lat':43.7174589, 'lon':10.4012256, 'phone':'444444', 
+        'cuisine_type':[Restaurant.CUISINE_TYPES(4),Restaurant.CUISINE_TYPES(5)], 'prec_measures':'leggeX', 'avg_time_of_stay':15,
+        'tables-0-table_name':'res4green', 'tables-0-capacity':4, 
+        'tables-1-table_name':'res4red', 'tables-1-capacity':4, 
+        'tables-2-table_name':'res4blue', 'tables-2-capacity':4,
+        'dishes-0-dish_name':'panino con carne', 'dishes-0-price':3, 'dishes-0-ingredients':'pane, carne',
+        'dishes-1-dish_name':'panino con pesce', 'dishes-1-price':3, 'dishes-1-ingredients':'pane, pesce',
+        'workingdays-0-day': WorkingDay.WEEK_DAYS(2), 'workingdays-0-work_shifts':"('19:00','23:00')",
+        'workingdays-1-day': WorkingDay.WEEK_DAYS(3), 'workingdays-1-work_shifts':"('19:00','23:00')",
+        'workingdays-2-day': WorkingDay.WEEK_DAYS(5), 'workingdays-2-work_shifts':"('19:00','23:00')",
+        'workingdays-3-day': WorkingDay.WEEK_DAYS(6), 'workingdays-3-work_shifts':"('19:00','23:00')"
+    }
+]
+
+reservation_dates_example = [
+    '09/11/2020',
+    '10/11/2020',
+    '11/11/2020',
+    '12/11/2020',
+    '13/11/2020',
+    '14/11/2020',
+    '15/11/2020',
+    '17/11/2020'
+]
+
+reservation_times_example = [
+    '12:00',
+    '12:05',
+    '12:10',
+    '12:30',
+    '12:50',
+    '13:00',
+    '13:03',
+    '13:08',
+    '13:20',
+    '13:33',
+    '13:50',
+    '14:20',
+    '14:40',
+    '15:00',
+    '19:00',
+    '19:02',
+    '19:13',
+    '19:18',
+    '19:33',
+    '19:40',
+    '19:57',
+    '20:20',
+    '20:31',
+    '20:40',
+    '21:30',
+    '21:40',
+    '21:50',
+    '22:30',
+    '23:50'
+]
+
+reservation_guests_number_example = [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+]
+
+reservation_guests_email_example = [
+    'guestemail1@test.com',
+    'guestemail2@test.com',
+    'guestemail3@test.com',
+    'guestemail4@test.com',
+    'guestemail5@test.com',
+    'guestemail6@test.com',
+    'guestemail7@test.com',
+    'guestemail8@test.com',
+    'guestemail9@test.com',
+    'guestemail10@test.com',
+    'guestemail11@test.com',
+    'guestemail12@test.com',
+    'guestemail13@test.com',
+    'guestemail14@test.com'
+]
+
+'''
+reservations_example = [
+    dict(
+        date='27/10/2020',
+        time='14:00',
+        guests=2
+    ),
+    dict(
+        date='27/10/2020',
+        time='14:00',
+        guests=2
+    ),
+    dict(
+        date='27/10/2020',
+        time='14:00',
+        guests=2
+    ),
+    dict(
+        date='27/10/2020',
+        time='14:00',
+        guests=2
+    ),
+    dict(
+        date='27/10/2020',
+        time='14:00',
+        guests=2
+    ),
+    dict(
+        date='27/10/2020',
+        time='14:00',
+        guests=2
+    ),
+    dict(
+        date='27/10/2020',
+        time='14:00',
+        guests=2
+    ),
+    dict(
+        date='27/10/2020',
+        time='14:00',
+        guests=2
+    ),
+]
+'''
+
+
+
+# recall: to call this function you must be logged in
+def create_restaurant_EP(test_client, data_dict=restaurant_example[0]):
+    return test_client.post('/create_restaurant', data=data_dict, follow_redirects=True)
+
+
+def restaurant_reservation_EP(test_client, restaurant_id, date, time, guests):
+    data = dict(date=date,time=time,guests=guests)
+    return test_client.post('/restaurants/'+str(restaurant_id), data=data, follow_redirects=True)
+
+
+def restaurant_reservation_GET_EP(test_client, restaurant_id, table_id_reservation, date, guests):
+    return test_client.get('/restaurants/'+restaurant_id+'/reservation?table_id='+str(table_id_reservation)+'&'+'guests='+str(guests)+'&'+'date='+date, follow_redirects=True)
+
+
+def restaurant_reservation_POST_EP(test_client, restaurant_id, table_id_reservation, date, guests, data):
+    return test_client.post('/restaurants/'+restaurant_id+'/reservation?table_id='+str(table_id_reservation)+'&'+'guests='+str(guests)+'&'+'date='+date, data=data, follow_redirects=True)

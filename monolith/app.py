@@ -1,5 +1,7 @@
 import os
 from flask import Flask
+
+from monolith.background import set_app
 from monolith.database import db, User, Restaurant, Table, WorkingDay
 from monolith.database import Reservation, Like, Seat, Review, Photo
 from monolith.database import Dish, Quarantine
@@ -16,6 +18,17 @@ def create_app():
     app.config['SECRET_KEY'] = 'ANOTHER ONE'
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gooutsafe.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # Flask-Mail configuration
+    app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
+    app.config['MAIL_PORT'] = 587
+    app.config['MAIL_USE_TLS'] = True
+    app.config['MAIL_USERNAME'] = 'gooutsafe1@gmail.com'
+    app.config['MAIL_PASSWORD'] = 'Admin123.'
+    app.config['MAIL_DEFAULT_SENDER'] = 'gooutsafe@gmail.com'
+
+    # setting app on celery
+    set_app(app)
 
     for bp in blueprints:
         app.register_blueprint(bp)

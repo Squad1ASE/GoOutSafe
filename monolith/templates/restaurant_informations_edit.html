@@ -1,0 +1,35 @@
+<h1>GoOutSafe</h1>
+
+{% if current_user.is_authenticated %}
+  Hi {{ current_user.firstname }}! <a href="/logout">Logout</a>
+
+  
+    <h2>Edit your Restaurants</h2>
+    <a href="/create_restaurant">Create a restaurant</a>
+    <br>
+    {% for restaurant in restaurants %}
+      <div>
+        <li>
+          <p>              
+              Name {{restaurant.name}} <br>    
+              Position at Lat: {{restaurant.lat}} -- Lon: {{restaurant.lon}} <br> 
+              Phone Number: {{restaurant.phone}} <br> 
+              <!-- implicitly derived from tables capacity -->
+              Capacity: {{restaurant.capacity}} <br>  
+              Cuisine Type: {{restaurant.cuisine_type}} <br>
+              Precautional Measures: {{restaurant.prec_measures}} <br>
+              Average time of stay: {{restaurant.avg_type_of_stay}} <br>
+              Total reviews: {{restaurant.tot_reviews}} <br>
+              Average rating: {{restaurant.avg_rating}} <br>     
+              Likes: {{restaurant.likes}} <br>
+              <a href="/edit_restaurant_informations/{{restaurant.id}}">Edit it!</a>
+
+          </p>        
+        </li>
+      </div>
+    {% endfor %}
+
+
+{% else %}
+  Hi Anonymous, <a href="/login">Log in</a>
+{% endif %}

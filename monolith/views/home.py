@@ -26,8 +26,8 @@ def index():
             restaurants = db.session.query(Restaurant).filter(Restaurant.owner_id == current_user.id)
             if restaurants.first() is None:
                 return render_template('error.html', message="You have not restaurants! Redirecting to create a new one", redirect_url="/create_restaurant")
-            #TODO: after merge add the create_restaurant button-> return render_template("restaurant_informations_edit.html", restaurants=restaurants)
-            return render_template('restaurants.html', restaurants=restaurants)
+            return render_template("restaurant_informations_edit.html", restaurants=restaurants)
+            #return render_template('restaurants.html', restaurants=restaurants)
         #return render_template('error.html', message="You are not a valid user! Redirecting to create a new one", redirect_url="/create_user"), 404
     else:
-        return redirect('/login')
+        return render_template("homepage.html") 

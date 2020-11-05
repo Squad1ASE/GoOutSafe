@@ -139,3 +139,14 @@ class ReservationRequest(FlaskForm):
     time = f.DateField('time', format='%H:%M', validators=[DataRequired()])
     guests = f.IntegerField('guests', validators=[DataRequired(), NumberRange(min=1)])
     display = ['date','time','guests']
+
+class ReviewForm(FlaskForm):
+    rating = f.IntegerField('Rating', validators=[NumberRange(min=0, max=10)])
+    comment = f.TextAreaField('Comment', validators=[DataRequired()])
+    display = ['rating', 'comment']
+
+class EditRestaurantForm(FlaskForm):
+    phone = f.StringField('Phone', validators=[DataRequired()])
+    #tables = f.FieldList(f.FormField(TableForm), min_entries=1, max_entries=100)
+    dishes = f.FieldList(f.FormField(DishForm), min_entries=1, max_entries=100)
+    display = ['phone']

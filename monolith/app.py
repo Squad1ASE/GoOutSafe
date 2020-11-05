@@ -41,15 +41,6 @@ def create_app():
             example.is_admin = True
             example.role = 'admin'
             db.session.add(example)
-            '''
-            role = Role()
-            user_roles = UserRoles()
-            role.name = 'admin'
-            db.session.add(role)
-            user_roles.role_id = role.id
-            user_roles.user_id = example.id
-            db.session.add(user_roles)
-            '''
             db.session.commit()
 
         q = db.session.query(User).filter(User.email == 'healthauthority@ha.com')

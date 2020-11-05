@@ -1,5 +1,5 @@
 from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish
-from monolith.classes.tests.conftest import test_app, create_user_EP, user_login_EP, create_restaurant_EP
+from monolith.classes.tests.conftest import test_app, create_user_EP, user_login_EP, create_restaurant_EP, insert_admin, insert_ha
 import json
 from sqlalchemy import exc
 
@@ -13,13 +13,15 @@ def test_component_home(test_app):
     assert test_client.get('/', follow_redirects=True).status_code == 200
     # admin
     assert test_client.get('/logout', follow_redirects=True)
-    assert create_user_EP(test_client, email='admin@admin.com', password='admin',role='admin').status_code == 200
+    #assert create_user_EP(test_client, email='admin@admin.com', password='admin',role='admin').status_code == 200
+    insert_admin(db, app)
     assert user_login_EP(test_client, 'admin@admin.com', 'admin').status_code == 200
     assert test_client.get('/', follow_redirects=True).status_code == 200
     # ha
     assert test_client.get('/logout', follow_redirects=True)
-    assert create_user_EP(test_client, email='ha@ha.com', password='ha',role='ha').status_code == 200
-    assert user_login_EP(test_client, 'ha@ha.com', 'ha').status_code == 200
+    #assert create_user_EP(test_client, email='ha@ha.com', password='ha',role='ha').status_code == 200
+    insert_ha(db, app)
+    assert user_login_EP(test_client, 'healthauthority@ha.com', 'ha').status_code == 200
     assert test_client.get('/', follow_redirects=True).status_code == 200
     # owner
     assert test_client.get('/logout', follow_redirects=True)

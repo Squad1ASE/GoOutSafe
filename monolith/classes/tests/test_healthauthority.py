@@ -1,5 +1,5 @@
 from monolith.database import db, User, Quarantine
-from monolith.classes.tests.conftest import test_app, create_user_EP, user_login_EP, user_example
+from monolith.classes.tests.conftest import test_app, create_user_EP, user_login_EP, user_example, insert_ha
 import datetime
 from sqlalchemy import exc
 
@@ -18,7 +18,8 @@ def test_mark_positive(test_app):
         role='ha'
     )
     temp_user_example_dict = user_example
-    assert create_user_EP(test_client, **temp_ha_dict).status_code == 200 
+    #assert create_user_EP(test_client, **temp_ha_dict).status_code == 200 
+    insert_ha(db,app)
     assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
 
     # --- UNIT TESTS ---
@@ -71,7 +72,8 @@ def test_component_health_authority(test_app):
         role='ha'
     )
     temp_user_example_dict = user_example
-    assert create_user_EP(test_client, **temp_ha_dict).status_code == 200 
+    #assert create_user_EP(test_client, **temp_ha_dict).status_code == 200 
+    insert_ha(db,app)
     assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
 
     # access to patient information is forbidden for customers

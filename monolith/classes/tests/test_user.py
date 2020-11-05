@@ -1,5 +1,5 @@
 from monolith.database import db, User
-from monolith.classes.tests.conftest import test_app, create_user_EP, user_login_EP, edit_user_EP, user_example
+from monolith.classes.tests.conftest import test_app, create_user_EP, user_login_EP, edit_user_EP, user_example, insert_admin
 import datetime
 from sqlalchemy import exc
 
@@ -74,6 +74,8 @@ def test_create_user(test_app):
 
     # --- COMPONENTS TESTS ---
     assert test_client.get('/create_user').status_code == 200
+
+    assert create_user_EP(test_client, role="admin").status_code == 403
 
     assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
 
@@ -245,15 +247,23 @@ def test_users_list(test_app):
     app, test_client = test_app
 
     temp_user_example_dict = user_example
+    insert_admin(db, app)
 
     #assert test_client.get('/users').status_code == 401
 
-    # create a new user
-    create_user_EP(test_client, **temp_user_example_dict)
-
     # login with a user
-    user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password'])
+    user_login_EP(test_client, 'admin@admin.com', 'admin')
 
     assert test_client.get('/users').status_code == 200
+
+    test_client.get('/logout', follow_redirects=True)
+
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
+
+    user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password'])
+
+    assert test_client.get('/users').status_code == 403
+
+
 
 

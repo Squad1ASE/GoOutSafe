@@ -206,6 +206,7 @@ def reservation(restaurant_id,table_id):
 def _like(restaurant_id):
     if (current_user.role == 'owner' or current_user.role == 'ha'):
         return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
+    
     q = Like.query.filter_by(liker_id=current_user.id, restaurant_id=restaurant_id)
     if q.first() != None:
         new_like = Like()

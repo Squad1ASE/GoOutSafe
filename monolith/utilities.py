@@ -1,6 +1,35 @@
-from monolith.database import Restaurant, WorkingDay
+from monolith.database import Restaurant, WorkingDay, User
 import datetime
 # --- UTILITIES USER ---
+
+def insert_admin(db, app):
+    with app.app_context():
+        example = User()
+        example.email = 'admin@admin.com'
+        example.phone = '3333333333'
+        example.firstname = 'Admin'
+        example.lastname = 'Admin'
+        example.set_password('admin')
+        example.dateofbirth = datetime.date(2020, 10, 5)
+        example.is_admin = True
+        example.role = 'admin'
+        db.session.add(example)
+        db.session.commit()
+
+def insert_ha(db, app):
+    with app.app_context():
+        example = User()
+        example.email = 'healthauthority@ha.com'
+        example.phone = '3333333333'
+        example.firstname = 'ha'
+        example.lastname = 'ha'
+        example.set_password('ha')
+        example.dateofbirth = datetime.date(2020, 10, 5)
+        example.is_admin = True
+        example.role = 'ha'
+        db.session.add(example)
+        db.session.commit()
+
 # customers
 customers_example = [
     dict(
@@ -9,7 +38,8 @@ customers_example = [
         firstname='firstname_test1',
         lastname='lastname_test1',
         password='passw1',
-        dateofbirth='05/10/2001'
+        dateofbirth='05/10/2001',
+        role='customer'
     ),
     dict(
         email='userexample2@test.com',
@@ -17,7 +47,8 @@ customers_example = [
         firstname='firstname_test2',
         lastname='lastname_test2',
         password='passw2',
-        dateofbirth='05/10/2002'
+        dateofbirth='05/10/2002',
+        role='customer'
     ),
     dict(
         email='userexample3@test.com',
@@ -25,7 +56,8 @@ customers_example = [
         firstname='firstname_test3',
         lastname='lastname_test3',
         password='passw3',
-        dateofbirth='05/10/2003'
+        dateofbirth='05/10/2003',
+        role='customer'
     ),
     dict(
         email='userexample4@test.com',
@@ -33,7 +65,8 @@ customers_example = [
         firstname='firstname_test4',
         lastname='lastname_test4',
         password='passw4',
-        dateofbirth='05/10/2004'
+        dateofbirth='05/10/2004',
+        role='customer'
     )
 ]       
 
@@ -45,7 +78,8 @@ restaurant_owner_example = [
         firstname='owner_firstname_test1',
         lastname='owner_lastname_test1',
         password='passw1',
-        dateofbirth='05/10/2001'
+        dateofbirth='05/10/2001',
+        role='owner'
     ),
     dict(
         email='restaurantowner2@test.com',
@@ -53,7 +87,8 @@ restaurant_owner_example = [
         firstname='owner_firstname_test2',
         lastname='owner_lastname_test2',
         password='passw2',
-        dateofbirth='05/10/2002'
+        dateofbirth='05/10/2002',
+        role='owner'
     ),
     dict(
         email='restaurantowner3@test.com',
@@ -61,7 +96,8 @@ restaurant_owner_example = [
         firstname='owner_firstname_test3',
         lastname='owner_lastname_test3',
         password='passw3',
-        dateofbirth='05/10/2003'
+        dateofbirth='05/10/2003',
+        role='owner'
     ),
     dict(
         email='restaurantowner4@test.com',
@@ -69,7 +105,8 @@ restaurant_owner_example = [
         firstname='owner_firstname_test4',
         lastname='owner_lastname_test4',
         password='passw4',
-        dateofbirth='05/10/2004'
+        dateofbirth='05/10/2004',
+        role='owner'
     )
 ]       
 
@@ -80,7 +117,8 @@ health_authority_example = dict(
     firstname='Ha',
     lastname='Ha',
     password='ha',
-    dateofbirth='05/10/2000'
+    dateofbirth='05/10/2000',
+    role='ha'
 )
 # admin 
 admin_example = dict(
@@ -89,12 +127,14 @@ admin_example = dict(
     firstname='badministrator_fn',
     lastname='badministrator_ln',
     password='badminpassw',
-    dateofbirth='05/10/2001'
+    dateofbirth='05/10/2001',
+    role='admin'
 )
 
 def create_user_EP(
         test_client, email=customers_example[0]['email'], phone=customers_example[0]['phone'],firstname=customers_example[0]['firstname'], 
-        lastname=customers_example[0]['lastname'], password=customers_example[0]['password'], dateofbirth=customers_example[0]['dateofbirth']
+        lastname=customers_example[0]['lastname'], password=customers_example[0]['password'], dateofbirth=customers_example[0]['dateofbirth'],
+        role=customers_example[0]['role']
     ):
     data = dict(
         email=email,
@@ -102,7 +142,8 @@ def create_user_EP(
         firstname=firstname,
         lastname=lastname,
         password=password,
-        dateofbirth=dateofbirth
+        dateofbirth=dateofbirth,
+        role=role
     )
     return test_client.post('/create_user', data=data, follow_redirects=True)
 

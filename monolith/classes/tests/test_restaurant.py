@@ -34,7 +34,7 @@ def test_create_restaurant(test_app):
     # --- UNIT TESTS ---
     with app.app_context():
         # create a user for testing the restaurant creation
-        assert create_user_EP(test_client, email='userexamplerestaurant@test.com', password='passw').status_code == 200
+        assert create_user_EP(test_client, email='userexamplerestaurant@test.com', password='passw', role='owner').status_code == 200
         user_test = db.session.query(User).filter(User.email == 'userexamplerestaurant@test.com').first()
         assert user_test is not None
         user_test_id = user_test.id

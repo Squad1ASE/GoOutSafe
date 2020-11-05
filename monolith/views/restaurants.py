@@ -58,12 +58,15 @@ def _check_dishes(form_dishes):
 @restaurants.route('/create_restaurant', methods=['GET','POST'])
 def create_restaurant():
     if current_user is not None and hasattr(current_user, 'id'):
-        
+        if (current_user.role == 'customer' or current_user.role == 'ha'):
+            return make_response(render_template('error.html', message="You are not a restaurant owner! Redirecting to home page", redirect_url="/"), 403)
+
         form = RestaurantForm()
 
         if request.method == 'POST':
 
             if form.validate_on_submit():
+
                 # if one or more fields that must not be present are
                 must_not_be_present = ['owner_id', 'capacity', 'tot_reviews', 'avg_rating', 'likes']
                 if any(k in must_not_be_present for k in request.form):
@@ -100,8 +103,7 @@ def create_restaurant():
                         el.restaurant_id = new_restaurant.id
                         db.session.add(el)
                 db.session.commit()
-
-                return redirect('/restaurants')
+                return redirect('/')
 
             else:
                 # invalid form
@@ -113,12 +115,22 @@ def create_restaurant():
         return make_response(render_template('error.html', message="You are not logged! Redirecting to login page", redirect_url="/login"), 403)
 
 @restaurants.route('/restaurants')
+@login_required
 def _restaurants(message=''):
+
+    if (current_user.role == 'ha' or current_user.role == 'owner'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
+    
     allrestaurants = db.session.query(Restaurant)
     return render_template("restaurants.html", message=message, restaurants=allrestaurants, base_url="http://127.0.0.1:5000/restaurants")
 
 @restaurants.route('/restaurants/<restaurant_id>', methods=['GET','POST'])
+@login_required
 def restaurant_sheet(restaurant_id):
+
+    if (current_user.role == 'ha' or current_user.role == 'owner'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
+
     restaurantRecord = db.session.query(Restaurant).filter_by(id = int(restaurant_id)).all()[0]
 
     #tableRecords = db.session.query(Table).filter(Table.restaurant_id == restaurant_id)
@@ -219,6 +231,10 @@ def restaurant_sheet(restaurant_id):
 @restaurants.route('/restaurants/<int:restaurant_id>/reservation', methods=['GET','POST'])
 @login_required
 def reservation(restaurant_id):
+
+    if (current_user.role == 'owner' or current_user.role == 'ha'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
+
     table_id = int(request.args.get('table_id'))
 
     # minus 1 because one is the user placing the reservation
@@ -299,6 +315,10 @@ def reservation(restaurant_id):
 @restaurants.route('/restaurants/like/<restaurant_id>')
 @login_required
 def _like(restaurant_id):
+
+    if (current_user.role == 'owner' or current_user.role == 'ha'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
+
     q = Like.query.filter_by(liker_id=current_user.id, restaurant_id=restaurant_id)
     if q.first() != None:
         new_like = Like()

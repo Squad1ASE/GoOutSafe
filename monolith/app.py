@@ -45,7 +45,8 @@ def create_app():
             example.firstname = 'Admin'
             example.lastname = 'Admin'
             example.set_password('admin')
-            example.dateofbirth = datetime.date(2020, 10, 5)            
+            example.dateofbirth = datetime.date(2020, 10, 5)
+            example.role = 'admin'           
             example.is_admin = True
             db.session.add(example)
             db.session.commit()

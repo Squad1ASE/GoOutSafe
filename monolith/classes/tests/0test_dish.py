@@ -1,8 +1,8 @@
 from monolith.database import db, User, Restaurant, Dish
 from monolith.classes.tests.conftest import test_app
+from monolith.utilities import create_user_EP
 import json
 from sqlalchemy import exc
-from monolith.utilities import create_user_EP
 
 
 def check_dishes(dish_to_check, dish):

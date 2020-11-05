@@ -328,3 +328,16 @@ def restaurant_reservation_GET_EP(test_client, restaurant_id, table_id_reservati
 
 def restaurant_reservation_POST_EP(test_client, restaurant_id, table_id_reservation, date, guests, data):
     return test_client.post('/restaurants/'+restaurant_id+'/reservation?table_id='+str(table_id_reservation)+'&'+'guests='+str(guests)+'&'+'date='+date, data=data, follow_redirects=True)
+
+
+
+
+# --- UTILITIES HEALTHAUTHORITY ---
+def mark_patient_as_positive(test_client, patient_mail):
+    email = patient_mail.replace('@', '%40')
+    return test_client.post('/patient_informations?email='+email, data=dict(mark_positive_button='mark_positive'), follow_redirects=True)
+
+
+
+
+

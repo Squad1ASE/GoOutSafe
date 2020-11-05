@@ -1,8 +1,9 @@
-from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Reservation
+from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Reservation, Quarantine
 from monolith.classes.tests.conftest import test_app
 from monolith.utilities import create_user_EP, user_login_EP, user_logout_EP, create_restaurant_EP, customers_example, restaurant_example, restaurant_owner_example
 from monolith.utilities import reservation_times_example, reservation_guests_number_example, reservation_guests_email_example, restaurant_reservation_EP, reservation_dates_example
 from monolith.utilities import restaurant_reservation_GET_EP, restaurant_reservation_POST_EP
+from monolith.utilities import health_authority_example, mark_patient_as_positive
 import json
 from sqlalchemy import exc
 import datetime
@@ -828,16 +829,7 @@ def test_create_restaurant(test_app):
         assert len(dishes) == tot_correct_dishes
 
 
-
-
-
-
-
-
-
-
-
-def test_restaurant(test_app):
+def test_restaurant_reservation(test_app):
     app, test_client = test_app
 
     # create customers
@@ -1086,3 +1078,58 @@ def test_restaurant_overlapping_reservation(test_app):
     ).status_code == 404
 
     user_logout_EP(test_client)
+
+def test_restaurant_reservation_as_positive(test_app):
+    app, test_client = test_app
+
+    # create customers
+    for user in customers_example:
+        create_user_EP(test_client,**user)
+
+    # create restaurant owners
+    for ro in restaurant_owner_example:
+        create_user_EP(test_client,**ro)
+
+    # create healthauthority
+    create_user_EP(test_client, **health_authority_example)
+
+    for usr_idx,restaurant in enumerate(restaurant_example):
+        user_login_EP(test_client, restaurant_owner_example[usr_idx]['email'], 
+                                    restaurant_owner_example[usr_idx]['password'])
+
+        create_restaurant_EP(test_client,restaurant)
+
+        user_logout_EP(test_client)
+
+    user_login_EP(test_client, health_authority_example['email'], health_authority_example['password'])
+    mark_patient_as_positive(test_client, customers_example[0]['email'])
+    user_logout_EP(test_client)
+
+    # Customer1 cannot book a table, he is positive
+
+    guests_email_dict = dict()
+    for i in range(reservation_guests_number_example[0]):
+        key = 'guest-'+str(i)+'-email'
+        guests_email_dict[key] = reservation_guests_email_example[i]
+
+    user_login_EP(test_client, customers_example[0]['email'],customers_example[0]['password'])
+
+
+    assert restaurant_reservation_EP(
+        test_client,
+        str(1),
+        reservation_dates_example[0],
+        reservation_times_example[0],
+        reservation_guests_number_example[0]
+    ).status_code == 222
+
+    # checking if we can bypass the first table availability search and place the order. This must fail
+    reservation_date_str = reservation_dates_example[0] + " " + reservation_times_example[0]
+    assert restaurant_reservation_POST_EP(
+        test_client,
+        str(1),
+        1,
+        reservation_date_str,
+        reservation_guests_number_example[0],
+        dict()
+    ).status_code == 222

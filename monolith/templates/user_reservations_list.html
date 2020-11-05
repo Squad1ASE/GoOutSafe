@@ -1,0 +1,13 @@
+<html>
+  <body>
+    <h1>Reservations list</h1>
+    <h5>{{message}}</h5>
+    <ul>
+      {% for reservation in reservations: %}
+      <li>
+      {{reservation.restaurant_name}} {{reservation.date}} <a href="{{base_url}}/editreservation/{{reservation.reservation_id}}">Edit</a> <a href="{{base_url}}/deletereservation/{{reservation.reservation_id}}">Delete!</a>
+      </li>
+      {% endfor %}
+    </ul>
+  </body>
+</html>

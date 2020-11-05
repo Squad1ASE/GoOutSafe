@@ -1,5 +1,5 @@
 from flask import Blueprint, redirect, render_template, request, make_response
-from monolith.database import db, Restaurant, Like, WorkingDay, Table, Dish, Seat, Reservation
+from monolith.database import db, Restaurant, Like, WorkingDay, Table, Dish, Seat, Reservation, Quarantine
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
@@ -154,6 +154,12 @@ def restaurant_sheet(restaurant_id):
                     # 3 check the list of available tables, the search starts from reservation (consider avg_stay_time)
                     # 4 check in the remaining tables if there is at least one that has more or equals seats then the required
                     
+                    # if customer is under observation (positive), reservation is denied
+
+                    positive_record = db.session.query(Quarantine).filter(Quarantine.user_id == current_user.id, Quarantine.in_observation == True).first()
+                    if positive_record is not None:
+                        return make_response(render_template('restaurantsheet.html', **data_dict, state_message="You are under observation! Reservations are denied"), 222)
+
                     weekday = form.date.data.weekday() + 1
                     workingday = db.session.query(WorkingDay).filter(WorkingDay.restaurant_id == int(restaurant_id)).filter(WorkingDay.day == WorkingDay.WEEK_DAYS(weekday)).first()
                     
@@ -219,6 +225,12 @@ def restaurant_sheet(restaurant_id):
 @restaurants.route('/restaurants/<int:restaurant_id>/reservation', methods=['GET','POST'])
 @login_required
 def reservation(restaurant_id):
+
+
+    positive_record = db.session.query(Quarantine).filter(Quarantine.user_id == current_user.id, Quarantine.in_observation == True).first()
+    if positive_record is not None:
+        return make_response(redirect('/restaurants/'+str(restaurant_id)), 222)
+
     table_id = int(request.args.get('table_id'))
 
     # minus 1 because one is the user placing the reservation

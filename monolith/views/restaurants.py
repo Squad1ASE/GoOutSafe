@@ -1,9 +1,9 @@
 from flask import Blueprint, redirect, render_template, request, make_response
-from monolith.database import db, Restaurant, Like, WorkingDay, Table, Dish, Seat, Reservation
+from monolith.database import db, Review, Restaurant, Like, WorkingDay, Table, Dish, Seat, Reservation
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
-from monolith.forms import UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail, ReservationRequest
+from monolith.forms import UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail, ReservationRequest, EditRestaurantForm, ReviewForm
 from monolith.views import auth
 import datetime
 from flask_wtf import FlaskForm
@@ -58,12 +58,15 @@ def _check_dishes(form_dishes):
 @restaurants.route('/create_restaurant', methods=['GET','POST'])
 def create_restaurant():
     if current_user is not None and hasattr(current_user, 'id'):
-        
+        if (current_user.role == 'customer' or current_user.role == 'ha'):
+            return make_response(render_template('error.html', message="You are not a restaurant owner! Redirecting to home page", redirect_url="/"), 403)
+
         form = RestaurantForm()
 
         if request.method == 'POST':
 
             if form.validate_on_submit():
+
                 # if one or more fields that must not be present are
                 must_not_be_present = ['owner_id', 'capacity', 'tot_reviews', 'avg_rating', 'likes']
                 if any(k in must_not_be_present for k in request.form):
@@ -100,8 +103,7 @@ def create_restaurant():
                         el.restaurant_id = new_restaurant.id
                         db.session.add(el)
                 db.session.commit()
-
-                return redirect('/restaurants')
+                return redirect('/')
 
             else:
                 # invalid form
@@ -113,12 +115,22 @@ def create_restaurant():
         return make_response(render_template('error.html', message="You are not logged! Redirecting to login page", redirect_url="/login"), 403)
 
 @restaurants.route('/restaurants')
+@login_required
 def _restaurants(message=''):
+
+    if (current_user.role == 'ha' or current_user.role == 'owner'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
+    
     allrestaurants = db.session.query(Restaurant)
     return render_template("restaurants.html", message=message, restaurants=allrestaurants, base_url="http://127.0.0.1:5000/restaurants")
 
 @restaurants.route('/restaurants/<restaurant_id>', methods=['GET','POST'])
+@login_required
 def restaurant_sheet(restaurant_id):
+
+    if (current_user.role == 'ha' or current_user.role == 'owner'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
+
     restaurantRecord = db.session.query(Restaurant).filter_by(id = int(restaurant_id)).all()[0]
 
     #tableRecords = db.session.query(Table).filter(Table.restaurant_id == restaurant_id)
@@ -143,6 +155,7 @@ def restaurant_sheet(restaurant_id):
                                                     totreviews=restaurantRecord.tot_reviews,
                                                     avgrating=restaurantRecord.avg_rating,
                                                     dishes=restaurant_menu,
+                                                    restaurant_id=restaurantRecord.id,
                                                     form=form)
 
 
@@ -219,6 +232,10 @@ def restaurant_sheet(restaurant_id):
 @restaurants.route('/restaurants/<int:restaurant_id>/reservation', methods=['GET','POST'])
 @login_required
 def reservation(restaurant_id):
+
+    if (current_user.role == 'owner' or current_user.role == 'ha'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
+
     table_id = int(request.args.get('table_id'))
 
     # minus 1 because one is the user placing the reservation
@@ -299,6 +316,10 @@ def reservation(restaurant_id):
 @restaurants.route('/restaurants/like/<restaurant_id>')
 @login_required
 def _like(restaurant_id):
+
+    if (current_user.role == 'owner' or current_user.role == 'ha'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
+
     q = Like.query.filter_by(liker_id=current_user.id, restaurant_id=restaurant_id)
     if q.first() != None:
         new_like = Like()
@@ -310,3 +331,179 @@ def _like(restaurant_id):
     else:
         message = 'You\'ve already liked this place!'
     return _restaurants(message)
+
+@restaurants.route('/edit_restaurant_informations', methods=['GET'])
+def restaurant_informations_edit():
+    if current_user is not None and hasattr(current_user, 'id'):
+
+        if (current_user.role == 'ha' or current_user.role == 'customer'):
+            return make_response(render_template('error.html', message="You are not an owner! Redirecting to home page", redirect_url="/"), 403)
+
+        restaurants = db.session.query(Restaurant).filter(Restaurant.owner_id == current_user.id)
+        if restaurants.first() is None:
+            return make_response(render_template('error.html', message="You have not restaurants! Redirecting to create a new one", redirect_url="/create_restaurant"), 403)
+
+        # in a GET I list all my restaurants
+        return render_template("restaurant_informations_edit.html", restaurants=restaurants)
+
+    # user not logged
+    return make_response(render_template('error.html', message="You are not logged! Redirecting to login page", redirect_url="/login"), 403)
+
+
+@restaurants.route('/edit_restaurant_informations/<restaurant_id>', methods=['GET','POST'])
+def restaurant_edit(restaurant_id):    
+    if current_user is not None and hasattr(current_user, 'id'):
+
+        if (current_user.role == 'ha' or current_user.role == 'customer'):
+            return make_response(render_template('error.html', message="You are not an owner! Redirecting to home page", redirect_url="/"), 403)
+
+        record = db.session.query(Restaurant).filter_by(id = int(restaurant_id)).first()
+        if record is None:    
+            return make_response(
+                render_template('error.html', 
+                    message="You have not restaurants! Redirecting to create a new one", 
+                    redirect_url="/create_restaurant"
+                ), 404)
+
+
+        form = EditRestaurantForm()
+
+        if request.method == 'POST':
+
+            if form.validate_on_submit():
+
+                phone_changed = form.data['phone']                
+                #tables_changed = []
+                #tot_capacity_changed = -1
+                dishes_changed = []
+                # check that phone and all tables/dishes fields are correct
+                # the changing of tables changes also the overall capacity
+                #tables_changed, tot_capacity_changed = _check_tables(form.tables.data)
+                #del form.tables
+
+                dishes_changed = _check_dishes(form.dishes.data)
+                del form.dishes
+                record.phone = phone_changed
+                #tables_to_edit = db.session.query(Table).filter(Table.restaurant_id == int(restaurant_id))
+                #if tables_to_edit is not None:                    
+                #    for t in tables_to_edit:
+                #        db.session.delete(t)
+                dishes_to_edit = db.session.query(Dish).filter(Dish.restaurant_id == int(restaurant_id))
+                if dishes_to_edit is not None: 
+                    for d in dishes_to_edit:
+                        db.session.delete(d)
+                '''
+                for l in [tables_changed, dishes_changed]:
+                    for el in l:
+                        el.restaurant_id = int(restaurant_id)
+                        db.session.add(el)                    
+                '''
+                for el in dishes_changed:
+                    newdish = Dish()
+                    newdish.restaurant_id = int(restaurant_id)
+                    newdish.dish_name = el.dish_name
+                    newdish.price = el.price
+                    newdish.ingredients = el.ingredients
+                    db.session.add(newdish)
+
+                db.session.commit()
+                return make_response(render_template('error.html', message="You have correctly edited! Redirecting to your restaurants", redirect_url="/edit_restaurant_informations"), 200)
+
+
+            else:
+                # invalid form
+                return make_response(render_template('restaurant_edit.html', form=form, base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id), 400)
+        else: 
+            # in the GET we fill all the fields
+            form.phone.data = record.phone
+
+            # will not be empty since from the creation of the restaurant at least one table was added            
+            #tables_to_edit = db.session.query(Table).filter(Table.restaurant_id == int(restaurant_id))
+            '''
+            i=0
+            for t in tables_to_edit:
+                form.tables[i].table_name.data = t.table_name
+                #print(t.table_name)
+                form.tables[i].capacity.data = t.capacity
+                #print(t.capacity)
+                i = i+1
+            '''
+
+            # will not be empty since from the creation of the restaurant at least one dish was added
+            dishes_to_edit = db.session.query(Dish).filter(Dish.restaurant_id == int(restaurant_id))
+            i=0
+            for d in dishes_to_edit:
+                form.dishes[i].dish_name.data = d.dish_name
+                form.dishes[i].price.data = d.price
+                form.dishes[i].ingredients.data = d.ingredients
+                i=i+1
+
+            return render_template('restaurant_edit.html', form=form, base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id)
+
+
+    # user not logged
+    return make_response(
+        render_template('error.html', 
+            message="You are not logged! Redirecting to login page", 
+            redirect_url="/login"
+        ), 403)
+
+@restaurants.route('/restaurants/reviews/<restaurant_id>', methods=['GET', 'POST'])
+@login_required
+def create_review(restaurant_id):
+    
+    if (current_user.role == 'ha'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
+
+    restaurantRecord = db.session.query(Restaurant).filter_by(id = int(restaurant_id)).all()[0]
+
+    reviews = Review.query.filter_by(restaurant_id=int(restaurant_id)).all()
+    ratings = 5
+
+    # get the first resrvation ordered by date
+    reservation = Reservation.query.order_by(Reservation.date).filter_by(booker_id = int(current_user.id)).first()
+
+    # the user has not been at restaurant yet
+    if (reservation is not None and reservation.date > datetime.datetime.today()):
+        reservation = None
+
+    review = Review.query.filter_by(reviewer_id = int(current_user.id)).filter_by(restaurant_id=restaurant_id).first()
+
+    form = ReviewForm()
+
+    if request.method == 'POST':
+
+        if current_user.role == 'owner':
+            return make_response(render_template('error.html', message="You are the owner of this restaurant! Redirecting to home page", redirect_url="/"), 403)
+
+        if reservation is None:
+            return make_response(render_template('error.html', message="You have never been at this restaurant! Redirecting to home page", redirect_url="/"), 403)
+
+        if review is not None:
+            return make_response(render_template('error.html', message="You have already reviewed this restaurant! Redirecting to home page", redirect_url="/"), 403)
+
+        if form.validate_on_submit():
+            # add to database
+            new_review = Review()
+            new_review.marked = False
+            new_review.comment = request.form['comment']
+            new_review.rating = request.form['rating']
+            new_review.date = datetime.date.today()
+            new_review.restaurant_id = restaurant_id
+            new_review.reviewer_id = current_user.id
+            db.session.add(new_review)
+            db.session.commit()
+            # after the review don't show the possibility to add another review
+            reviews = Review.query.filter_by(restaurant_id=int(restaurant_id)).all()
+            return render_template("reviews_owner.html", reviews=reviews), 200
+
+        else:
+            return render_template("reviews.html", form=form,reviews=reviews), 400
+
+
+    elif current_user.role == 'customer' and review is None and reservation is not None:
+        return render_template("reviews.html", form=form, reviews=reviews), 200
+
+    else:
+        return render_template("reviews_owner.html", reviews=reviews), 555
+

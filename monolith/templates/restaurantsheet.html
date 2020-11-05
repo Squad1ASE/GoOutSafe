@@ -37,6 +37,11 @@
       <p>
       <input type=submit value="Book">
     </form>
+    <a href='/restaurants/reviews/{{restaurant_id}}'>Reviews</a>
+    <br>
+    {% if current_user.is_authenticated %}
+      <a href="/logout">Logout</a>
+    {% endif %}
   </body>
 </html>
 

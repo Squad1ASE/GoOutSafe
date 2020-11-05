@@ -15,5 +15,9 @@
         <form action="" method="GET">
             <input type="submit" name="go_back_button" value="go_back">
         </form>
+
+        {% if current_user.is_authenticated %}
+            <a href="/logout">Logout</a>
+        {% endif %}
     </body>
 </head>

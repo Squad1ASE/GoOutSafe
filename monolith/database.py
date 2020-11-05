@@ -5,7 +5,11 @@ from sqlalchemy.schema import CheckConstraint
 from enum import Enum
 import time
 
-db = SQLAlchemy()
+db = SQLAlchemy(session_options={
+
+    'expire_on_commit': False
+
+})
 
 
 # class that the enums used in the underlying classes 

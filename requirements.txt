@@ -7,3 +7,4 @@ flask-sqlalchemy
 pip-tools
 email_validator
 pytest
+flask_mail==0.9.0

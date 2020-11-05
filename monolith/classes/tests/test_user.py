@@ -1,5 +1,6 @@
 from monolith.database import db, User
-from monolith.classes.tests.conftest import test_app, create_user_EP, user_login_EP, edit_user_EP, user_example
+from monolith.classes.tests.conftest import test_app
+from monolith.utilities import create_user_EP, user_login_EP, edit_user_EP, customers_example
 import datetime
 from sqlalchemy import exc
 
@@ -19,7 +20,7 @@ def populate_user():
 def test_create_user(test_app):
     app, test_client = test_app
 
-    temp_user_example_dict = user_example
+    temp_user_example_dict = customers_example[0]
 
     # --- UNIT TESTS ---
     with app.app_context():
@@ -78,16 +79,11 @@ def test_create_user(test_app):
     temp_user_example_dict['email'] = "newtestinguser@test.com"
     assert create_user_EP(test_client, **temp_user_example_dict).status_code == 403 
 
-    temp_user_example_dict['email'] = "userexample@test.com"
-    user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password'])
-
-    assert test_client.get('/create_user').status_code == 403
-
 
 def test_login_user(test_app):
     app, test_client = test_app
 
-    temp_user_example_dict = user_example
+    temp_user_example_dict = customers_example[0]
 
     test_client.post('/create_user', data=temp_user_example_dict, follow_redirects=True)
     
@@ -138,7 +134,7 @@ def test_login_user(test_app):
 def test_logout_user(test_app):
     app, test_client = test_app
 
-    temp_user_example_dict = user_example
+    temp_user_example_dict = customers_example[0]
 
     create_user_EP(test_client, **temp_user_example_dict)
     
@@ -164,7 +160,7 @@ def test_unit_edit_user(test_app):
 
     app, test_client = test_app
 
-    temp_user_example_dict = user_example
+    temp_user_example_dict = customers_example[0]
     
     # create a user
     create_user_EP(test_client, **temp_user_example_dict)
@@ -189,7 +185,7 @@ def test_unit_edit_user(test_app):
         assert getuser.firstname == temp_user_example_dict['firstname']
         assert getuser.lastname == temp_user_example_dict['lastname']
         assert getuser.password == "newpassw"
-        assert getuser.dateofbirth == datetime.date(2000, 10, 5)
+        assert getuser.dateofbirth == datetime.date(2001, 10, 5)
         
 
     #--- COMPONENT TESTS ---
@@ -198,7 +194,7 @@ def test_component_user_editing(test_app):
 
     app, test_client = test_app
 
-    temp_user_example_dict = user_example
+    temp_user_example_dict = customers_example[0]
 
     # create a new user
     create_user_EP(test_client, **temp_user_example_dict)
@@ -234,7 +230,7 @@ def test_users_list(test_app):
 
     app, test_client = test_app
 
-    temp_user_example_dict = user_example
+    temp_user_example_dict = customers_example[0]
 
     #assert test_client.get('/users').status_code == 401
 

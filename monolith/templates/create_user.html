@@ -3,13 +3,15 @@
   <form action="" method="POST">
     {{ form.hidden_tag() }}
     <dl>
-     {% for field in form.display %}
-     <dt>{{ form[field].label }}</dt>
-     <dd>{{ form[field]() }}</dd>
-       {% if form[field].errors %}
-          {% for e in form[field].errors %}
-           <p class="help-block">{{ e }}</p>
-          {% endfor %}
+      {% for field in form.display %}
+      {% if field != 'role' %}
+        <dt>{{ form[field].label }}</dt>
+        <dd>{{ form[field]() }}</dd>
+          {% if form[field].errors %}
+              {% for e in form[field].errors %}
+              <p class="help-block">{{ e }}</p>
+              {% endfor %}
+        {% endif %}
        {% endif %}
      {% endfor %}
     </dl>

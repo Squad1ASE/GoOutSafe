@@ -1,0 +1,12 @@
+<html>
+    <body>
+        <h1>Reviews</h1>
+        <ul>
+            {% if current_user.is_authenticated %}
+              {% for review in reviews %}
+                <p>Rating: {{review.rating}}, Comment: {{review.comment}}</p>
+              {% endfor %}
+            {% endif %}
+        </ul>
+    </body>
+</html>

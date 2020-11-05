@@ -1,0 +1,29 @@
+<html>
+    <body>
+        <h1>Reviews</h1>
+        <ul>
+            {% if current_user.is_authenticated %}
+              {% for review in reviews %}
+                <p>Rating: {{review.rating}}, Comment: {{review.comment}}</p>
+              {% endfor %}
+            {% endif %}
+        </ul>
+        <form action="" method="POST">
+            {{ form.hidden_tag() }}
+            <ul>
+              {% if current_user.is_authenticated %}
+                <ul>
+                  <dt>{{ form['rating'].label }}</dt>
+                  <select id="select-rate" name="rating">
+                    {% for i in range(5) %}
+                      <option value= "{{i+1}}" SELECTED>{{ i+1 }} stars</option>"
+                    {% endfor %}
+                  </select>
+                  <dt>{{ form['comment'].label }}</dt>
+                  <dd>{{ form['comment']() }}</dd>
+                {% endif %}
+              </ul>
+            <input type=submit value="Add review">
+          </form>
+    </body>
+</html>

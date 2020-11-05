@@ -1,5 +1,5 @@
 from flask import Blueprint, redirect, render_template, request, make_response
-from monolith.database import db, Restaurant, Like, WorkingDay, Table, Dish, Seat, Reservation
+from monolith.database import db, Review, Restaurant, Like, WorkingDay, Table, Dish, Seat, Reservation
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
@@ -155,6 +155,7 @@ def restaurant_sheet(restaurant_id):
                                                     totreviews=restaurantRecord.tot_reviews,
                                                     avgrating=restaurantRecord.avg_rating,
                                                     dishes=restaurant_menu,
+                                                    restaurant_id=restaurantRecord.id,
                                                     form=form)
 
 
@@ -447,4 +448,61 @@ def restaurant_edit(restaurant_id):
             redirect_url="/login"
         ), 403)
 
+@restaurants.route('/restaurants/reviews/<restaurant_id>')
+@login_required
+def create_review(restaurant_id):
+
+    if (current_user.role == 'ha'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
+
+    restaurantRecord = db.session.query(Restaurant).filter_by(id = int(restaurant_id)).all()[0]
+
+    reviews = Review.query.filter_by(restaurant_id=int(restaurant_id)).all()
+    ratings = 5
+
+    reservation = Reservation.query.filter_by(booker_id = int(current_user.id)).first()
+
+    # the user has not been at restaurant yet
+    if (reservation is not None and reservation.date > datetime.date.today()):
+        reservation = None
+
+    review = Review.query.filter_by(reviewer_id = int(current_user.id)).filter_by(restaurant_id=restaurant_id).first()
+
+    form = ReviewForm()
+
+    if request.method == 'POST':
+
+        if current_user.role == 'owner':
+            return make_response(render_template('error.html', message="You are the owner of this restaurant! Redirecting to home page", redirect_url="/"), 403)
+
+        if reservation is None:
+            return make_response(render_template('error.html', message="You have never been at this restaurant! Redirecting to home page", redirect_url="/"), 403)
+
+        if review is not None:
+            return make_response(render_template('error.html', message="You have already reviewed this restaurant! Redirecting to home page", redirect_url="/"), 403)
+
+        if form.validate_on_submit():
+            # add to database
+            new_review = Review()
+            new_review.marked = False
+            new_review.comment = request.form['comment']
+            new_review.rating = request.form['rating']
+            new_review.date = datetime.date.today()
+            new_review.restaurant_id = restaurant_id
+            new_review.reviewer_id = current_user.id
+            db.session.add(new_review)
+            db.session.commit()
+            # after the review don't show the possibility to add another review
+            reviews = Review.query.filter_by(restaurant_id=int(restaurant_id)).all()
+            return render_template("reviews_owner.html", reviews=reviews), 200
+
+        else:
+            return render_template("reviews.html", form=form,reviews=reviews), 400
+
+
+    elif current_user.role == 'customer' and review is None and reservation is not None:
+        return render_template("reviews.html", form=form, reviews=reviews), 200
+
+    else:
+        return render_template("reviews_owner.html", reviews=reviews), 200
 

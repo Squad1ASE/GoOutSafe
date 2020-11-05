@@ -5,4 +5,4 @@ web:
     - PYTHONPATH=./
   ports:
     - "5000:5000"
-  command: pytest monolith/classes/tests/
+  command: pytest monolith/classes/tests/ --cov=monolith

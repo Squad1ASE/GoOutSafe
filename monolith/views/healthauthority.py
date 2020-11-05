@@ -12,7 +12,7 @@ healthauthority = Blueprint('healthauthority', __name__)
 @healthauthority.route('/patient_informations', methods=['GET','POST'])
 @login_required
 def get_patient_informations():
-    if(current_user.email != "healthauthority@ha.com"):
+    if(current_user.role != "ha"):
         return make_response(render_template('error.html', message="Access denied!", redirect_url="/"), 403)
 
     form = GetPatientInformationsForm()
@@ -28,6 +28,10 @@ def get_patient_informations():
             if(getuser is None):
                 form.email.errors.append("Wrong email. User doesn't exist")
                 return render_template('generic_template.html', form=form), 404
+                
+            elif(getuser.role == 'ha' or getuser.role == 'admin'):
+                form.email.errors.append("You can not mark this user!")
+                return render_template('generic_template.html', form=form), 403
 
             # email correct, show patient's informations 
             else:

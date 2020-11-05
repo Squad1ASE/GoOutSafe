@@ -388,5 +388,10 @@
     <a class="removeDish" href="#">Remove</a>
   </div>
 
+
+  {% if current_user.is_authenticated %}
+    <a href="/logout">Logout</a>
+  {% endif %}
+
  </body>
 </html>

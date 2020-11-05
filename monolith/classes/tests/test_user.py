@@ -2,7 +2,7 @@ from monolith.database import db, User
 from monolith.classes.tests.conftest import test_app
 from monolith.utilities import create_user_EP, user_login_EP, user_logout_EP, edit_user_EP, customers_example, reservation_guests_email_example, reservation_guests_number_example
 from monolith.utilities import reservation_dates_example, reservation_times_example
-from monolith.utilities import restaurant_reservation_POST_EP, restaurant_owner_example, restaurant_example, create_restaurant_EP
+from monolith.utilities import restaurant_reservation_POST_EP, restaurant_owner_example, restaurant_example, create_restaurant_EP, insert_admin
 import datetime
 from sqlalchemy import exc
 
@@ -15,6 +15,7 @@ def populate_user():
     new_user.lastname = "lastname_test"
     new_user.password = "passw"
     new_user.dateofbirth = datetime.date(2020, 10, 5)
+    new_user.role = "customer"
 
     return new_user
 
@@ -43,11 +44,20 @@ def test_create_user(test_app):
         assert getuser.lastname == "lastname_test"
         assert getuser.password == "passw"
         assert getuser.dateofbirth == datetime.date(2020, 10, 5)
+        assert getuser.role == "customer"
         
         # setting a wrong email syntax
         count_assert = 0
         try:
             new_user.email = "newuserwrongemail"
+        except SyntaxError:
+            count_assert = 1
+            assert True
+        assert count_assert == 1
+
+        count_assert = 0
+        try:
+            new_user.role = "norole"
         except SyntaxError:
             count_assert = 1
             assert True
@@ -66,8 +76,13 @@ def test_create_user(test_app):
         
 
     # --- COMPONENTS TESTS ---
+    # get with the success
     assert test_client.get('/create_user').status_code == 200
 
+    #create an admin (403)
+    assert create_user_EP(test_client, role="admin").status_code == 403
+
+    #create an user with success
     assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
 
     # creation of a user with an already existing email must fail
@@ -77,9 +92,18 @@ def test_create_user(test_app):
     temp_user_example_dict['email'] = 'newuserwrongemail'
     assert create_user_EP(test_client, **temp_user_example_dict).status_code == 400
 
+    #assert test_client.get('/logout', follow_redirects=True).status_code == 200
+
     # creation of a user with an already existing email must fail (in this case user was added via db.commit)
     temp_user_example_dict['email'] = "newtestinguser@test.com"
     assert create_user_EP(test_client, **temp_user_example_dict).status_code == 403 
+
+    #assert test_client.get('/logout', follow_redirects=True).status_code == 200
+    
+    temp_user_example_dict['email'] = "userexample1@test.com"
+    assert user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password']).status_code == 200
+
+    assert test_client.get('/create_user').status_code == 403
 
 
 def test_login_user(test_app):
@@ -233,16 +257,24 @@ def test_users_list(test_app):
     app, test_client = test_app
 
     temp_user_example_dict = customers_example[0]
+    insert_admin(db, app)
 
     #assert test_client.get('/users').status_code == 401
 
-    # create a new user
-    create_user_EP(test_client, **temp_user_example_dict)
-
     # login with a user
-    user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password'])
+    assert user_login_EP(test_client, 'admin@admin.com', 'admin').status_code == 200
 
     assert test_client.get('/users').status_code == 200
+
+    assert test_client.get('/logout', follow_redirects=True).status_code == 200
+
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
+
+    assert user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password']).status_code == 200
+
+    assert test_client.get('/users').status_code == 403
+
+
 
 
 def test_users_reservation(test_app):

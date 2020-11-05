@@ -13,7 +13,10 @@ import datetime
 users = Blueprint('users', __name__)
 
 @users.route('/users')
+@login_required
 def _users():
+    if (current_user.role != 'admin'):
+        return make_response(render_template('error.html', message="You are not the admin! Redirecting to home page", redirect_url="/"), 403)
     users = db.session.query(User)
     return render_template("users.html", users=users)
 
@@ -31,6 +34,7 @@ def create_user():
 
             new_user = User()
             form.populate_obj(new_user)
+            new_user.role = request.form['role']
             check_already_register = db.session.query(User).filter(User.email == new_user.email).first()
             
             if(check_already_register is not None):
@@ -39,9 +43,12 @@ def create_user():
                 
             new_user.set_password(form.password.data) #pw should be hashed with some salt
             
+            if new_user.role != 'customer' and new_user.role != 'owner':
+                return make_response(render_template('error.html', message="You can sign in only as customer or owner! Redirecting to home page", redirect_url="/"), 403)
+            
             db.session.add(new_user)
             db.session.commit()
-            return redirect('/users')
+            return redirect('/')
         else:
             # invalid form
             return make_response(render_template('create_user.html', form=form), 400)

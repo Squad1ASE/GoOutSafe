@@ -19,7 +19,8 @@ class UserForm(FlaskForm):
     lastname = f.StringField('lastname', validators=[DataRequired()])
     password = f.PasswordField('password', validators=[DataRequired(), Length(1,8)])
     dateofbirth = f.DateField('dateofbirth', format='%d/%m/%Y')
-    display = ['email', 'phone', 'firstname', 'lastname', 'password', 'dateofbirth']
+    role = f.StringField('role', validators=[DataRequired()])
+    display = ['email', 'phone', 'firstname', 'lastname', 'password', 'dateofbirth', 'role']
 
 
 class EditUserForm(FlaskForm):
@@ -151,3 +152,14 @@ class RestaurantSearch(FlaskForm):
     )
 
     display = ['name', 'lat', 'lon', 'cuisine_type']
+
+class ReviewForm(FlaskForm):
+    rating = f.IntegerField('Rating', validators=[NumberRange(min=0, max=5)])
+    comment = f.TextAreaField('Comment', validators=[DataRequired()])
+    display = ['rating', 'comment']
+
+class EditRestaurantForm(FlaskForm):
+    phone = f.StringField('Phone', validators=[DataRequired()])
+    #tables = f.FieldList(f.FormField(TableForm), min_entries=1, max_entries=100)
+    dishes = f.FieldList(f.FormField(DishForm), min_entries=1, max_entries=100)
+    display = ['phone']

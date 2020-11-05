@@ -16,5 +16,9 @@
     <p>
     <input type=submit value="Submit">
   </form>
+
+  {% if current_user.is_authenticated %}
+    <a href="/logout">Logout</a>
+  {% endif %}
  </body>
 </html>

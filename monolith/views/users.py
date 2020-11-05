@@ -1,9 +1,14 @@
 from flask import Blueprint, redirect, render_template, request, make_response
-from monolith.database import db, User
+from monolith.database import db, User, Reservation, Restaurant, Seat
 from monolith.auth import admin_required
-from monolith.forms import UserForm, EditUserForm
+from flask_wtf import FlaskForm
+import wtforms as f
+from wtforms import Form
+from wtforms.validators import DataRequired, Length, Email, NumberRange
+from monolith.forms import UserForm, EditUserForm, SubReservationPeopleEmail
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
+import datetime
 
 users = Blueprint('users', __name__)
 
@@ -81,3 +86,107 @@ def edit_user():
     else:
         form.phone.data = user.phone
         return render_template('edit_user.html', form=form, email=current_user.email)
+
+
+@users.route('/users/reservation_list', methods=['GET'])
+@login_required
+def reservation_list():
+
+    reservation_records = db.session.query(Reservation).filter(
+        Reservation.booker_id == current_user.id, 
+        Reservation.cancelled == False,
+        Reservation.date >= datetime.datetime.now()
+    ).all()
+
+    data_dict = []
+    for reservation in reservation_records:
+        rest_name = db.session.query(Restaurant).filter_by(id = reservation.restaurant_id).first().name
+        temp_dict = dict(
+            restaurant_name = rest_name,
+            date = reservation.date,
+            reservation_id = reservation.id
+        )
+        data_dict.append(temp_dict)
+
+    return render_template('user_reservations_list.html', reservations=data_dict, base_url="http://127.0.0.1:5000/users")
+
+
+@users.route('/users/deletereservation/<reservation_id>')
+@login_required
+def deletereservation(reservation_id):
+
+    q = Reservation.query.filter_by(id = reservation_id).first()
+
+    if q is not None:
+
+        seat_query = Seat.query.filter_by(reservation_id = q.id).all()
+
+        for seat in seat_query:
+            seat.confirmed = True
+
+        q.cancelled = True
+
+        db.session.commit()
+
+    return reservation_list()
+
+@users.route('/users/editreservation/<reservation_id>', methods=['GET','POST'])
+@login_required
+def editreservation(reservation_id):
+
+    q = Reservation.query.filter_by(id = reservation_id).first()
+    
+    if q is not None:
+
+        seat_query = db.session.query(Seat).filter(Seat.reservation_id == q.id).all()
+
+        number_of_guests = len(seat_query) -1
+
+        if(len(seat_query) > 1):
+
+            guests_email_list = list()
+
+            for seat in seat_query:
+                if(seat.guests_email != current_user.email):
+                    guests_email_list.append(seat.guests_email)
+
+            class edit_form(FlaskForm):
+                guest = f.FieldList(f.FormField(SubReservationPeopleEmail), min_entries=number_of_guests, max_entries=number_of_guests)
+                display = ['guest']
+
+            form = edit_form()
+
+            if request.method == 'POST':
+
+                if form.validate_on_submit():
+
+                    for i, email_field in enumerate(form.guest.data):
+
+                        #if(email_field['email'] != guests_email_list[i]):
+                            
+                         #   if(email_field['email'] == ""):
+                          #      seat_query[i].confirmed = False
+                           # else:
+                             #   seat_query[i].confirmed = email_field['email']
+
+                        seat_query[i].guests_email = email_field['email']
+                    
+                    db.session.commit()
+
+                    # this isn't an error
+                    return make_response(render_template('error.html', message="Guests changed!", redirect_url="/"), 222)
+
+
+            return render_template('user_reservation_edit.html', form=form)
+    
+    else:
+        return reservation_list()
+
+    
+    
+
+
+
+
+
+

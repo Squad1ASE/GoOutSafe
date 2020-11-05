@@ -1,6 +1,8 @@
 from monolith.database import db, User
 from monolith.classes.tests.conftest import test_app
-from monolith.utilities import create_user_EP, user_login_EP, edit_user_EP, customers_example, insert_admin
+from monolith.utilities import create_user_EP, user_login_EP, user_logout_EP, edit_user_EP, customers_example, reservation_guests_email_example, reservation_guests_number_example
+from monolith.utilities import reservation_dates_example, reservation_times_example
+from monolith.utilities import restaurant_reservation_POST_EP, restaurant_owner_example, restaurant_example, create_restaurant_EP, insert_admin
 import datetime
 from sqlalchemy import exc
 
@@ -274,4 +276,58 @@ def test_users_list(test_app):
 
 
 
+
+def test_users_reservation(test_app):
+    app, test_client = test_app
+
+    # create customers
+    for user in customers_example:
+        create_user_EP(test_client,**user)
+
+    # create restaurant owners
+    for ro in restaurant_owner_example:
+        create_user_EP(test_client,**ro)
+
+    for usr_idx,restaurant in enumerate(restaurant_example):
+        user_login_EP(test_client, restaurant_owner_example[usr_idx]['email'], 
+                                    restaurant_owner_example[usr_idx]['password'])
+
+        create_restaurant_EP(test_client,restaurant)
+
+        user_logout_EP(test_client)
+
+    restaurant_id = ['1','2','3','4']
+
+    reservation_date_str_dict = [
+        reservation_dates_example[1] + " " + reservation_times_example[0],
+        reservation_dates_example[1] + " " + reservation_times_example[3]
+    ]
+
+    guests_email_dict = dict()
+    for i in range(reservation_guests_number_example[1]):
+        key = 'guest-'+str(i)+'-email'
+        guests_email_dict[key] = reservation_guests_email_example[i]
+
+    # log as customer 1
+    user_login_EP(test_client, customers_example[0]['email'], 
+                                customers_example[0]['password'])
+    # Customer1
+    assert restaurant_reservation_POST_EP(
+        test_client,
+        restaurant_id[0],
+        1,
+        reservation_date_str_dict[0],
+        reservation_guests_number_example[1],
+        guests_email_dict
+    ).status_code == 666
+
+    assert test_client.get('/users/reservation_list', follow_redirects=True).status_code == 200
+
+    assert test_client.get('/users/editreservation/1', follow_redirects=True).status_code == 200
+
+    guests_email_dict['guest-0-email'] = "newguest@email.com"
+
+    assert test_client.post('/users/editreservation/1', data=guests_email_dict, follow_redirects=True).status_code == 222
+
+    assert test_client.get('/users/deletereservation/1', follow_redirects=True).status_code == 200
 

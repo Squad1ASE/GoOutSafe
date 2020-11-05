@@ -376,3 +376,10 @@ def restaurant_reservation_POST_EP(test_client, restaurant_id, table_id_reservat
 
 def create_review_EP(test_client, data_dict, rest_id):
     return test_client.post('/restaurants/reviews/'+str(rest_id), data=data_dict, follow_redirects=True)
+
+# --- UTILITIES HEALTHAUTHORITY ---
+def mark_patient_as_positive(test_client, patient_mail):
+    email = patient_mail.replace('@', '%40')
+    return test_client.post('/patient_informations?email='+email, data=dict(mark_positive_button='mark_positive'), follow_redirects=True)
+
+

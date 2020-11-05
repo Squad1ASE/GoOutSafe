@@ -6,7 +6,8 @@ from monolith.database import Dish, Quarantine
 from monolith.database import Notification
 from monolith.views import blueprints
 from monolith.auth import login_manager
-from monolith.utilities import insert_ha, create_user_EP, user_login_EP, user_logout_EP, create_restaurant_EP, customers_example, restaurant_example, admin_example, health_authority_example
+from monolith.utilities import insert_ha, create_user_EP, user_login_EP, user_logout_EP, create_restaurant_EP, customers_example
+from monolith.utilities import restaurant_example, admin_example, health_authority_example, restaurant_owner_example 
 import datetime
 import time
 
@@ -60,9 +61,12 @@ def create_app():
     for user in customers_example:
         create_user_EP(test_client,**user)
 
+    for user in restaurant_owner_example:
+        create_user_EP(test_client,**user)
+
     for usr_idx,restaurant in enumerate(restaurant_example):
-        user_login_EP(test_client, customers_example[usr_idx]['email'], 
-                                    customers_example[usr_idx]['password'])
+        user_login_EP(test_client, restaurant_owner_example[usr_idx]['email'], 
+                                    restaurant_owner_example[usr_idx]['password'])
 
         create_restaurant_EP(test_client,restaurant)
 

@@ -140,6 +140,19 @@ class ReservationRequest(FlaskForm):
     guests = f.IntegerField('guests', validators=[DataRequired(), NumberRange(min=1)])
     display = ['date','time','guests']
 
+class RestaurantSearch(FlaskForm):
+    name = f.StringField('Name')
+    lat = f.StringField('Latitude')
+    lon = f.StringField('Longitude')
+
+    cuisine_type = f.SelectMultipleField(
+        'Cuisine types', 
+        choices = Restaurant.CUISINE_TYPES.choices(),
+        coerce = Restaurant.CUISINE_TYPES.coerce
+    )
+
+    display = ['name', 'lat', 'lon', 'cuisine_type']
+
 class ReviewForm(FlaskForm):
     rating = f.IntegerField('Rating', validators=[NumberRange(min=0, max=5)])
     comment = f.TextAreaField('Comment', validators=[DataRequired()])

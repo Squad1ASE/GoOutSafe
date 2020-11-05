@@ -260,15 +260,15 @@ def test_users_list(test_app):
     #assert test_client.get('/users').status_code == 401
 
     # login with a user
-    user_login_EP(test_client, 'admin@admin.com', 'admin')
+    assert user_login_EP(test_client, 'admin@admin.com', 'admin').status_code == 200
 
     assert test_client.get('/users').status_code == 200
 
-    test_client.get('/logout', follow_redirects=True)
+    assert test_client.get('/logout', follow_redirects=True).status_code == 200
 
     assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
 
-    user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password'])
+    assert user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password']).status_code == 200
 
     assert test_client.get('/users').status_code == 403
 

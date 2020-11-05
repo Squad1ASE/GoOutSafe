@@ -52,11 +52,11 @@ def create_app():
             db.session.commit()
 
     
-    '''
+
     test_client = app.test_client()
 
-    #create_user_EP(app.test_client(),**health_authority_example)
     insert_ha(db, app)
+    
     for user in customers_example:
         create_user_EP(test_client,**user)
 
@@ -67,7 +67,6 @@ def create_app():
         create_restaurant_EP(test_client,restaurant)
 
         user_logout_EP(test_client)
-    '''
 
         
 

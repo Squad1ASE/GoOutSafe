@@ -1,1 +1,2 @@
-monolith/gououtsafe.db
+#ignore db files
+*.db

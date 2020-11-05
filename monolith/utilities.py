@@ -4,31 +4,35 @@ import datetime
 
 def insert_admin(db, app):
     with app.app_context():
-        example = User()
-        example.email = 'admin@admin.com'
-        example.phone = '3333333333'
-        example.firstname = 'Admin'
-        example.lastname = 'Admin'
-        example.set_password('admin')
-        example.dateofbirth = datetime.date(2020, 10, 5)
-        example.is_admin = True
-        example.role = 'admin'
-        db.session.add(example)
-        db.session.commit()
+        admin = db.session.query(User).filter_by(email='admin@admin.com').first()
+        if admin is None:
+            example = User()
+            example.email = 'admin@admin.com'
+            example.phone = '3333333333'
+            example.firstname = 'Admin'
+            example.lastname = 'Admin'
+            example.set_password('admin')
+            example.dateofbirth = datetime.date(2020, 10, 5)
+            example.is_admin = True
+            example.role = 'admin'
+            db.session.add(example)
+            db.session.commit()
 
 def insert_ha(db, app):
     with app.app_context():
-        example = User()
-        example.email = 'healthauthority@ha.com'
-        example.phone = '3333333333'
-        example.firstname = 'ha'
-        example.lastname = 'ha'
-        example.set_password('ha')
-        example.dateofbirth = datetime.date(2020, 10, 5)
-        example.is_admin = True
-        example.role = 'ha'
-        db.session.add(example)
-        db.session.commit()
+        ha = db.session.query(User).filter_by(email='healthauthority@ha.com').first()
+        if ha is None:
+            example = User()
+            example.email = 'healthauthority@ha.com'
+            example.phone = '3333333333'
+            example.firstname = 'ha'
+            example.lastname = 'ha'
+            example.set_password('ha')
+            example.dateofbirth = datetime.date(2020, 10, 5)
+            example.is_admin = True
+            example.role = 'ha'
+            db.session.add(example)
+            db.session.commit()
 
 # customers
 customers_example = [

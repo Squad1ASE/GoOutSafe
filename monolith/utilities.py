@@ -1,5 +1,7 @@
 from monolith.database import Restaurant, WorkingDay
 import datetime
+
+
 # --- UTILITIES RESTAURANT  ---
 restaurant_example = [
     { 

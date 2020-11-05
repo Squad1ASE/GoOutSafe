@@ -448,7 +448,7 @@ def restaurant_edit(restaurant_id):
             redirect_url="/login"
         ), 403)
 
-@restaurants.route('/restaurants/reviews/<restaurant_id>')
+@restaurants.route('/restaurants/reviews/<restaurant_id>', methods=['GET', 'POST'])
 @login_required
 def create_review(restaurant_id):
 
@@ -463,7 +463,7 @@ def create_review(restaurant_id):
     reservation = Reservation.query.filter_by(booker_id = int(current_user.id)).first()
 
     # the user has not been at restaurant yet
-    if (reservation is not None and reservation.date > datetime.date.today()):
+    if (reservation is not None and reservation.date > datetime.datetime.today()):
         reservation = None
 
     review = Review.query.filter_by(reviewer_id = int(current_user.id)).filter_by(restaurant_id=restaurant_id).first()
@@ -504,5 +504,5 @@ def create_review(restaurant_id):
         return render_template("reviews.html", form=form, reviews=reviews), 200
 
     else:
-        return render_template("reviews_owner.html", reviews=reviews), 200
+        return render_template("reviews_owner.html", reviews=reviews), 555
 

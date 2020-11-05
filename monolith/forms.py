@@ -141,7 +141,7 @@ class ReservationRequest(FlaskForm):
     display = ['date','time','guests']
 
 class ReviewForm(FlaskForm):
-    rating = f.IntegerField('Rating', validators=[NumberRange(min=0, max=10)])
+    rating = f.IntegerField('Rating', validators=[NumberRange(min=0, max=5)])
     comment = f.TextAreaField('Comment', validators=[DataRequired()])
     display = ['rating', 'comment']
 

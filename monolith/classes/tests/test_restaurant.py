@@ -2,7 +2,7 @@ from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Res
 from monolith.classes.tests.conftest import test_app
 from monolith.utilities import create_user_EP, user_login_EP, user_logout_EP, create_restaurant_EP, customers_example, restaurant_example, restaurant_owner_example
 from monolith.utilities import reservation_times_example, reservation_guests_number_example, reservation_guests_email_example, restaurant_reservation_EP, reservation_dates_example
-from monolith.utilities import restaurant_reservation_GET_EP, restaurant_reservation_POST_EP
+from monolith.utilities import restaurant_reservation_GET_EP, restaurant_reservation_POST_EP, insert_ha
 import json
 from sqlalchemy import exc
 import datetime
@@ -220,6 +220,13 @@ def test_create_restaurant(test_app):
         
 
     # --- COMPONENTS TESTS ---
+
+    # create a restaurant with ha (403)
+    insert_ha(db, app)
+    assert user_login_EP(test_client, email='healthauthority@ha.com', password='ha').status_code == 200
+    assert create_restaurant_EP(test_client, dict()).status_code == 403
+    assert test_client.get('/restaurants', follow_redirects=True).status_code == 403
+    assert test_client.get('/logout', follow_redirects=True).status_code == 200
 
     # get and post should fail without login
     assert test_client.get('/create_restaurant', follow_redirects=True).status_code == 403

@@ -451,7 +451,7 @@ def restaurant_edit(restaurant_id):
 @restaurants.route('/restaurants/reviews/<restaurant_id>', methods=['GET', 'POST'])
 @login_required
 def create_review(restaurant_id):
-
+    
     if (current_user.role == 'ha'):
         return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
 
@@ -460,7 +460,8 @@ def create_review(restaurant_id):
     reviews = Review.query.filter_by(restaurant_id=int(restaurant_id)).all()
     ratings = 5
 
-    reservation = Reservation.query.filter_by(booker_id = int(current_user.id)).first()
+    # get the first resrvation ordered by date
+    reservation = Reservation.query.order_by(Reservation.date).filter_by(booker_id = int(current_user.id)).first()
 
     # the user has not been at restaurant yet
     if (reservation is not None and reservation.date > datetime.datetime.today()):

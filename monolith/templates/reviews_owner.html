@@ -8,5 +8,9 @@
               {% endfor %}
             {% endif %}
         </ul>
+        <br>
+        {% if current_user.is_authenticated %}
+          <a href="/logout">Logout</a>
+        {% endif %}
     </body>
 </html>

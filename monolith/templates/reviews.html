@@ -25,5 +25,9 @@
               </ul>
             <input type=submit value="Add review">
           </form>
+          <br>
+          {% if current_user.is_authenticated %}
+            <a href="/logout">Logout</a>
+          {% endif %}
     </body>
 </html>

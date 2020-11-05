@@ -70,21 +70,40 @@ def test_component_reviews(test_app):
     # try to review a place when i'm a owner (403)
     assert create_review_EP(test_client, review, restaurant.id).status_code == 403
 
-    # try to get as a customer without a reservation (555)
-    assert test_client.get('/restaurants/reviews/'+str(restaurant.id)).status_code == 555
-
-    # try to review a restaurant when i never been there (403)
-
     # logout with the owner (200)
     assert test_client.get('/logout', follow_redirects=True).status_code == 200
-
+    
     # create a customer
     assert create_user_EP(test_client, **customers_example[0]).status_code == 200
 
-    # login with other user (200)
+    # login with the customer (200)
     assert user_login_EP(test_client, customers_example[0]['email'], customers_example[0]['password']).status_code == 200
 
-    # create a reservation (200)
+    # try to get as a customer without a reservation (555)
+    assert test_client.get('/restaurants/reviews/'+str(restaurant.id)).status_code == 555
+    assert create_review_EP(test_client, review, restaurant.id).status_code == 403
+
+    # create a reservation in the future (200)
+    assert restaurant_reservation_EP(test_client, 
+                                     restaurant.id, 
+                                     '10/10/2030',
+                                     reservation_times_example[0], 
+                                     reservation_guests_number_example[0]).status_code == 200
+
+    reservation_date_str = '10/10/2030' + " " + reservation_times_example[14]
+    assert restaurant_reservation_POST_EP(
+        test_client,
+        str(restaurant.id),
+        '8',
+        reservation_date_str,
+        '1',
+        customers_example[0]['email']
+    ).status_code == 666
+
+    # try to review when i'm not been there yet
+    assert test_client.get('/restaurants/reviews/'+str(restaurant.id)).status_code == 555
+
+    # create a reservation in the past(200)
     assert restaurant_reservation_EP(test_client, 
                                      restaurant.id, 
                                      '10/10/2020',
@@ -105,7 +124,11 @@ def test_component_reviews(test_app):
     assert create_review_EP(test_client, uncorrect_review, restaurant.id).status_code == 400
 
     # try to get as a customer who has a reservation (200)
+    assert test_client.get('/restaurants/reviews/'+str(restaurant.id), follow_redirects=True).status_code == 200
     assert create_review_EP(test_client, review, restaurant.id).status_code == 200
+    assert test_client.get('/restaurants/like/'+str(restaurant.id)).status_code == 200
+
+    assert test_client.get('/restaurants', follow_redirects=True).status_code == 200
 
     # try to double review the same restaurant (403)
     assert create_review_EP(test_client, review, restaurant.id).status_code == 403
@@ -120,6 +143,9 @@ def test_component_reviews(test_app):
 
     # try to get as health authority (555)
     assert test_client.get('/restaurants/reviews/'+str(restaurant.id)).status_code == 403
+    assert test_client.get('/restaurants/'+str(restaurant.id)).status_code == 403
+    assert test_client.get('/restaurants/'+str(restaurant.id)+'/reservation').status_code == 403
+    assert test_client.get('/restaurants/like/'+str(restaurant.id)).status_code == 403
 
     # try to post as health authority (403)
     assert create_review_EP(test_client, review, restaurant.id).status_code == 403

@@ -241,7 +241,7 @@ class Seat(db.Model):
     reservation_id = db.Column(db.Integer, db.ForeignKey('reservation.id'))
     reservation = relationship('Reservation', foreign_keys='Seat.reservation_id')
 
-    guests_email = db.Column(db.String, nullable=False)  
+    guests_email = db.Column(db.String)  
 
     confirmed = db.Column(db.Boolean, default=True)
 
@@ -325,10 +325,54 @@ class Quarantine(db.Model):
 class Notification(db.Model):
     __tablename__ = 'notification'
 
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    class TYPE(FormEnum):
+        contact_with_positive = 1
+        reservation_canceled = 2
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     user = relationship('User', foreign_keys='Notification.user_id')
 
-    message = db.Column(db.Unicode(128))
+    email = db.Column(db.Unicode(128), db.CheckConstraint('length(email) > 0'), nullable=False)  
+    message = db.Column(db.Unicode(128), db.CheckConstraint('length(message) > 0'), nullable=False)
     pending = db.Column(db.Boolean, default=True)
-    type_ = db.Column(db.Integer)  # 0=through email, 2=app
-    date = db.Column(db.DateTime)
+    type_ = db.Column(db.PickleType, nullable=False)  
+    date = db.Column(db.DateTime, nullable=False)
+
+    @validates('user_id')
+    def validate_user_id(self, key, user_id):
+        if user_id is not None:
+            if (user_id <= 0): raise ValueError("user_id must be > 0")
+        return user_id
+        
+    @validates('email')
+    def validate_email(self, key, email):
+        if email is None: raise ValueError("type_ is None")
+        if (len(email) == 0): raise ValueError("email is empty")
+        if('@' and '.' in email): #min email possible: a@b.c
+            return email
+        raise ValueError('Wrong email syntax')
+
+    @validates('message')
+    def validate_message(self, key, message):
+        if (message is None): raise ValueError("message is None")
+        if (len(message) == 0): raise ValueError("message is empty")
+        return message
+    
+    @validates('pending')
+    def validate_pending(self, key, pending):
+        if (pending is None): raise ValueError("pending is None")
+        return pending
+
+    @validates('type_')
+    def validate_type_(self, key, type_):
+        if type_ is None: raise ValueError("type_ is None")
+        if not isinstance(type_, Notification.TYPE): raise ValueError("type_ is not a Notification.TYPE")
+        return type_
+
+    @validates('date')
+    def validate_date(self, key, date):
+        if (date is None): raise ValueError("date is None")
+        return date
+    

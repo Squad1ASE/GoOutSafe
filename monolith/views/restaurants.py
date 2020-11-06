@@ -115,6 +115,7 @@ def create_restaurant():
     else:
         return make_response(render_template('error.html', message="You are not logged! Redirecting to login page", redirect_url="/login"), 403)
 
+
 @restaurants.route('/restaurants')
 @login_required
 def _restaurants(message=''):
@@ -124,6 +125,7 @@ def _restaurants(message=''):
     
     allrestaurants = db.session.query(Restaurant)
     return render_template("restaurants.html", message=message, restaurants=allrestaurants, base_url="http://127.0.0.1:5000/restaurants")
+
 
 @restaurants.route('/restaurants/<restaurant_id>', methods=['GET','POST'])
 @login_required
@@ -236,6 +238,7 @@ def restaurant_sheet(restaurant_id):
 
     return render_template("restaurantsheet.html", **data_dict)
 
+
 @restaurants.route('/restaurants/<int:restaurant_id>/reservation', methods=['GET','POST'])
 @login_required
 def reservation(restaurant_id):
@@ -252,28 +255,12 @@ def reservation(restaurant_id):
     # minus 1 because one is the user placing the reservation
     guests = int(request.args.get('guests')) -1
     date = datetime.datetime.strptime(request.args.get('date'), "%d/%m/%Y %H:%M")
-    #table_id = int(request.get('table_id'))
-    #guests = int(request.get('guests'))
 
-    # checking if restaurant and table are correct
-    # TODO maybe this part could be removed, I did it before removing access to table to the users
-    '''
-    restaurantRecord = db.session.query(Restaurant).filter_by(id = restaurant_id).first()
-    if(restaurantRecord is None):
-        return make_response(render_template('error.html', message="Restaurant doesn't exist", redirect_url="/restaurants"), 404)
-
-    tableRecord = db.session.query(Table).filter_by(id = table_id).first()
-    if(tableRecord is None):
-        return make_response(render_template('error.html', message="Table doesn't exist", redirect_url="/restaurants/"+str(restaurant_id)), 404)
-    '''
     class test(FlaskForm):
         guest = f.FieldList(f.FormField(SubReservationPeopleEmail), min_entries=guests, max_entries=guests)
         display = ['guest']
     
-    #form = ReservationPeopleEmail()
     form = test()
-    #print(tableRecord.capacity)
-    #form.capacity = tableRecord.capacity
 
     if request.method == 'POST':
 
@@ -283,7 +270,6 @@ def reservation(restaurant_id):
                 reservation.booker_id = current_user.id
                 reservation.restaurant_id = restaurant_id
                 reservation.table_id = table_id
-                # TODO change date when work shifts available
                 reservation.date = date
                 reservation.cancelled = False
 
@@ -324,6 +310,7 @@ def reservation(restaurant_id):
                 
     return render_template('reservation.html', form=form)
 
+
 @restaurants.route('/restaurants/like/<restaurant_id>')
 @login_required
 def _like(restaurant_id):
@@ -342,6 +329,7 @@ def _like(restaurant_id):
     else:
         message = 'You\'ve already liked this place!'
     return _restaurants(message)
+
 
 @restaurants.route('/restaurants/search', methods=['GET', 'POST'])
 @login_required
@@ -396,6 +384,7 @@ def search():
 
     
     return render_template('restaurantsearch.html', form=form)
+
 
 @restaurants.route('/edit_restaurant_informations', methods=['GET'])
 def restaurant_informations_edit():
@@ -512,6 +501,7 @@ def restaurant_edit(restaurant_id):
             message="You are not logged! Redirecting to login page", 
             redirect_url="/login"
         ), 403)
+
 
 @restaurants.route('/restaurants/reviews/<restaurant_id>', methods=['GET', 'POST'])
 @login_required

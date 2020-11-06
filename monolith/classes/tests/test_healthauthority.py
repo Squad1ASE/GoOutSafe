@@ -1,8 +1,9 @@
-from monolith.database import db, User, Quarantine
+from monolith.database import db, User, Quarantine, Restaurant, Notification
 from monolith.classes.tests.conftest import test_app
-from monolith.utilities import create_user_EP, user_login_EP, insert_ha, customers_example, health_authority_example,  mark_patient_as_positive
+from monolith.utilities import user_logout_EP, restaurant_reservation_POST_EP, restaurant_reservation_EP, create_restaurant_EP, create_user_EP, user_login_EP, insert_ha, customers_example, restaurant_example, restaurant_owner_example, health_authority_example,  mark_patient_as_positive
 import datetime
 from sqlalchemy import exc
+from datetime import timedelta
 
 
 def test_mark_positive(test_app):
@@ -58,6 +59,8 @@ def test_mark_positive(test_app):
         assert getquarantinenewstatus.in_observation == False
     
     # --- COMPONENTS TESTS ---
+
+
 def test_component_health_authority(test_app):
 
     app, test_client = test_app
@@ -111,3 +114,64 @@ def test_component_health_authority(test_app):
     # go to the previous page when patient is already marked as positive
     result = test_client.get('/patient_informations?email=userexample1%40test.com', data=dict(go_back_button='go_back'), follow_redirects=True)
     assert result.status_code == 200
+
+
+def test_contact_tracing_health_authority(test_app):
+    app, test_client = test_app
+
+    # create a health authority and an user for testing
+    temp_user_example_dict = customers_example[0]
+    #assert create_user_EP(test_client, **temp_ha_dict).status_code == 200 
+    insert_ha(db,app)
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
+    temp_user_example_dict = customers_example[1]
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
+ 
+    # create a owner and login
+    temp_owner_example_dict = restaurant_owner_example[0]
+    assert create_user_EP(test_client, **temp_owner_example_dict).status_code == 200
+    assert user_login_EP(test_client, temp_owner_example_dict['email'], temp_owner_example_dict['password']).status_code == 200
+    
+    # create a restaurant
+    temp_restaurant_example = restaurant_example[2]
+    assert create_restaurant_EP(test_client, temp_restaurant_example).status_code == 200
+
+    restaurant = None
+    with app.app_context():
+        restaurant = db.session.query(Restaurant).filter(Restaurant.name == temp_restaurant_example['name']).first()
+    assert restaurant is not None 
+
+    # make a reservation
+    user_logout_EP(test_client)
+    assert user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password']).status_code == 200
+
+    date = datetime.datetime.now() - timedelta(days=2)
+    timestamp = date.strftime("%d/%m/%Y")
+    assert restaurant_reservation_EP(test_client, 
+                                     restaurant.id, 
+                                     timestamp,
+                                     '20:00', 
+                                     '2').status_code == 200
+
+    reservation_date_str = timestamp + ' 20:00'
+    assert restaurant_reservation_POST_EP(
+        test_client,
+        str(restaurant.id),
+        '1',
+        reservation_date_str,
+        '2',
+        { 'guest-0-email':'notified01@ex.com'}
+    ).status_code == 666
+
+
+    # login ha
+    user_logout_EP(test_client)
+    assert user_login_EP(test_client, "healthauthority@ha.com", "ha").status_code == 200
+
+    # mark positive
+    assert mark_patient_as_positive(test_client, temp_user_example_dict['email']).status_code == 555
+
+    # test notification
+    with app.app_context():
+        notifications = db.session.query(Notification).all()
+        assert len(notifications) == 2

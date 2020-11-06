@@ -1,0 +1,83 @@
+<html>
+  <body>
+    {% if current_user.is_authenticated %}
+      <h1> Hi {{ current_user.firstname }}!</h1>
+      <br>
+      {# HA #}
+      {% if current_user.role == 'ha' %}
+        <h2><a href="/patient_informations">Get patient informations</a></h2>
+      {% endif %}
+
+
+      {# ADMIN #}
+      {% if current_user.role == 'admin' %}
+
+          <h2>Restaurants list: </h2>
+          <ul>
+            {% for restaurant in restaurants: %}
+            <li>
+            {{restaurant.name}}     
+            <a href="{{base_url}}/{{restaurant.id}}">See Details!</a>
+            </li>
+            {% endfor %}
+          </ul>
+        
+        <br>
+      {% endif %}
+
+
+      {# CUSTOMER #}
+      {% if current_user.role == 'customer' %}
+        <a href="/restaurants">See restaurants</a>
+        <br>
+      {% endif %}
+      
+
+
+      {# OWNER #}
+      {% if current_user.role == 'owner' %}
+        
+        <h2><a href='/create_restaurant'>Insert a new restaurant</a></h2>
+        <br>
+        <h2>Restaurants list: </h2>
+          <ul>
+            {% for restaurant in restaurants: %}
+            <li>
+            {{restaurant.name}}     
+            <a href="{{base_url}}/{{restaurant.id}}">Edit</a>
+            </li>
+            {% endfor %}
+          </ul>
+        <br>
+      {% endif %}
+      
+
+      {# OWNER or CUSTOMER #}
+      {% if current_user.role == 'owner' or current_user.role == 'customer' %}
+
+        {% if notifications|length > 0 %}
+          <h2>Notifications: </h2>
+          {% for notification in notifications %}
+          <ul>
+            <h4>
+              {% if notification.type_ == 1 %}
+                <b>contact with positive</b>
+              {% endif %}
+              {% if notification.type_ == 2 %}
+                <b>reservation canceled</b>
+              {% endif %}
+                  ({{notification.date}}):  {{notification.message}}
+            </h4> 
+          </ul>
+          {% endfor %}
+        {% endif %}
+
+      {% endif %}
+
+
+
+      <br>
+        <a href="/logout">Logout</a>
+    {% endif %}
+  </body>
+</html>

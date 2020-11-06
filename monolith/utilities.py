@@ -1,7 +1,8 @@
 from monolith.database import Restaurant, WorkingDay, User
 import datetime
-# --- UTILITIES USER ---
 
+
+# --- UTILITIES USER ---
 def insert_admin(db, app):
     with app.app_context():
         admin = db.session.query(User).filter_by(email='admin@admin.com').first()
@@ -374,8 +375,10 @@ def restaurant_reservation_GET_EP(test_client, restaurant_id, table_id_reservati
 def restaurant_reservation_POST_EP(test_client, restaurant_id, table_id_reservation, date, guests, data):
     return test_client.post('/restaurants/'+restaurant_id+'/reservation?table_id='+str(table_id_reservation)+'&'+'guests='+str(guests)+'&'+'date='+date, data=data, follow_redirects=True)
 
+
 def create_review_EP(test_client, data_dict, rest_id):
     return test_client.post('/restaurants/reviews/'+str(rest_id), data=data_dict, follow_redirects=True)
+
 
 # --- UTILITIES HEALTHAUTHORITY ---
 def mark_patient_as_positive(test_client, patient_mail):

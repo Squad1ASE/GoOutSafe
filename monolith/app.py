@@ -1,7 +1,6 @@
 import os
 from flask import Flask
 
-from monolith.background import set_app
 from monolith.database import db, User, Restaurant, Table, WorkingDay
 from monolith.database import Reservation, Like, Seat, Review, Photo
 from monolith.database import Dish, Quarantine
@@ -11,7 +10,13 @@ from monolith.auth import login_manager
 import datetime
 import time
 
-        
+
+from celery import Celery
+from flask_mail import Message, Mail
+
+mail = None
+
+
 def create_app():
     app = Flask(__name__)
     app.config['WTF_CSRF_SECRET_KEY'] = 'A SECRET KEY'
@@ -27,9 +32,6 @@ def create_app():
     app.config['MAIL_PASSWORD'] = 'Admin123.'
     app.config['MAIL_DEFAULT_SENDER'] = 'gooutsafe@gmail.com'
 
-    # setting app on celery
-    set_app(app)
-
     for bp in blueprints:
         app.register_blueprint(bp)
         bp.app = app
@@ -38,13 +40,12 @@ def create_app():
     login_manager.init_app(app)
     db.create_all(app=app)
 
-
     with app.app_context():
 
         q = db.session.query(User).filter(User.email == 'admin@admin.com')
         user = q.first()
         if user is None:
-            # create a first admin user 
+            # create a first admin user
             # test for a user defined in database.db
             example = User()
             example.email = 'admin@admin.com'
@@ -52,7 +53,7 @@ def create_app():
             example.firstname = 'Admin'
             example.lastname = 'Admin'
             example.set_password('admin')
-            example.dateofbirth = datetime.date(2020, 10, 5)            
+            example.dateofbirth = datetime.date(2020, 10, 5)
             example.is_admin = True
             db.session.add(example)
             db.session.commit()
@@ -60,7 +61,6 @@ def create_app():
         q = db.session.query(User).filter(User.email == 'healthauthority@ha.com')
         user = q.first()
         if user is None:
-
             # test for a user defined in database.db
             example = User()
             example.email = 'healthauthority@ha.com'
@@ -68,7 +68,7 @@ def create_app():
             example.firstname = 'Ha'
             example.lastname = 'Ha'
             example.set_password('ha')
-            example.dateofbirth = datetime.date(2020, 10, 5)            
+            example.dateofbirth = datetime.date(2020, 10, 5)
             example.is_admin = False
             db.session.add(example)
             db.session.commit()
@@ -76,7 +76,6 @@ def create_app():
         q = db.session.query(User).filter(User.email == 'test@test.com')
         user = q.first()
         if user is None:
-
             # test for a user defined in database.db
             example = User()
             example.email = 'test@test.com'
@@ -84,13 +83,10 @@ def create_app():
             example.firstname = 'Testfirstname'
             example.lastname = 'Testlastname'
             example.set_password('test')
-            example.dateofbirth = datetime.date(2020, 10, 5)            
+            example.dateofbirth = datetime.date(2020, 10, 5)
             example.is_admin = False
             db.session.add(example)
             db.session.commit()
-
-
-        ''' delete this part, this is a restaurant with Admin as the owner
 
         q = db.session.query(User).filter(User.email == 'admin@admin.com')
         user = q.first()
@@ -100,15 +96,15 @@ def create_app():
             example = Restaurant()
 
             example.owner_id = user.id
-            
-            example.name = 'Trial Restaurant'            
+
+            example.name = 'Trial Restaurant'
             example.likes = 42
             example.phone = 555123456
             example.lat = 43.720586
             example.lon = 10.408347
 
             example.capacity = 30
-            example.cuisine_type= [Restaurant.CUISINE_TYPES(1),Restaurant.CUISINE_TYPES(2)]
+            example.cuisine_type = [Restaurant.CUISINE_TYPES(1), Restaurant.CUISINE_TYPES(2)]
             example.prec_measures = 'leggeX'
             example.tot_reviews = 2
             example.avg_rating = 2.0
@@ -116,212 +112,140 @@ def create_app():
 
             db.session.add(example)
             db.session.commit()
-        '''
 
-
-        '''
-        q = db.session.query(Restaurant).filter(Restaurant.id == 1)
-        restaurant = q.first()
-        print(restaurant)
-        print(restaurant.cuisine_type)
-        print(restaurant.owner_id)
-        print(restaurant.owner)
-
-
-        q = db.session.query(Table).filter(Table.id == 1)
-        table = q.first()
-        if table is None:
-            example = Table()
-            example.restaurant_id = restaurant.id
-            example.name = 'table'
-            example.capacity = 10        
-
-            db.session.add(example)
-            db.session.commit()
-        
-        q = db.session.query(Table).filter(Table.id == 1)
-        table = q.first()
-        print(table)
-        print(table.name)
-        print(table.restaurant_id)
-        
-
-
-        q = db.session.query(WorkingDay).filter(WorkingDay.id == 1)
-        wd = q.first()
-        if wd is None:
-            example = WorkingDay()
-            example.restaurant_id = restaurant.id
-            example.work_shifts = [('12:00','15:00'), ('19:00','23:00')]
-            example.day = 1       
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(WorkingDay).filter(WorkingDay.id == 1)
-        wd = q.first()
-        print(wd)
-        print(wd.work_shifts)
-        print(wd.day)
-
-
-        q = db.session.query(Reservation).filter(Reservation.id == 1)
-        r = q.first()
-        if r is None:
-            example = Reservation()
-            example.booker_id = user.id
-            example.restaurant_id = restaurant.id
-            example.table_id = table.id
-            example.date = datetime.datetime(2020, 10, 5)            
-            example.hour =  ('19:00','20:00')
-            example.cancelled = False        
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Reservation).filter(Reservation.id == 1)
-        r = q.first()
-        print(r)
-        print(r.hour)
-        print(r.restaurant_id)
-
-
-        q = db.session.query(Like)
-        l = q.first()
-        if l is None:
-            example = Like()
-            example.liker_id = user.id
-            example.restaurant_id = restaurant.id
-            example.marked = True        
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Like)
-        l = q.first()
-        print(l)
-        print(l.marked)
-        print(l.liker_id)
-
-        q = db.session.query(Seat).filter(Seat.reservation_id == 1, Seat.user_id==1)
-        s = q.first()
-        if s is None:
-            example = Seat()
-            example.reservation_id = r.id
-            example.user_id = user.id
-            example.confirmed = True        
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Seat).filter(Seat.reservation_id == 1, Seat.user_id==1)
-        s = q.first()
-        print(s)
-        print(s.confirmed)
-        print(s.user_id)
-
-
-        q = db.session.query(Review)
-        rev = q.first()
-        if rev is None:
-            example = Review()
-            example.reviewer_id = user.id
-            example.restaurant_id = restaurant.id
-            example.marked = True        
-            example.rating = 2
-            example.comment = "ciao"
-            example.date = datetime.datetime(2002,10,5)
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Review)
-        rev = q.first()
-        print(rev)
-        print(rev.marked)
-        print(rev.comment)
-
-
-        q = db.session.query(Photo).filter(Photo.id == 1)
-        ph = q.first()
-        if ph is None:
-            example = Photo()
-            example.restaurant_id = restaurant.id
-            example.path = 'http://...'
-            example.description = 'abc'
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Photo).filter(Photo.id == 1)
-        ph = q.first()
-        print(ph)
-        print(ph.path)
-        print(ph.restaurant_id)
-
-
-        q = db.session.query(Dishes).filter(Dishes.id == 1)
-        d = q.first()
-        if d is None:
-            example = Dishes()
-            example.restaurant_id = restaurant.id
-            example.price = 1.50
-            example.name = 'pizza'
-            example.ingredients = ('tomato', 'flour')            
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Dishes).filter(Dishes.id == 1)
-        d = q.first()
-        print(d)
-        print(d.name)
-        print(d.ingredients)
-
-        q = db.session.query(Quarantine).filter(Quarantine.user_id == 1)
-        quar = q.first()
-        if quar is None:
-            example = Quarantine()
-            example.user_id = user.id
-            example.start_date = datetime.datetime(2020, 10, 5)            
-            example.end_date = datetime.datetime(2020, 10, 6)            
-            example.active = False
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Quarantine).filter(Quarantine.user_id == 1)
-        quar = q.first()
-        print(quar)
-        print(quar.user_id)
-        print(quar.active)
-
-
-        q = db.session.query(Notification).filter(Notification.user_id == 1)
-        note = q.first()
-        if note is None:
-            example = Notification()
-            example.user_id = user.id
-            example.message = 'You are infected'
-            example.pending = True
-            example.type_ = 0
-            example.date = datetime.datetime(2020, 10, 5)            
-
-            db.session.add(example)
-            db.session.commit()
-
-        q = db.session.query(Notification).filter(Notification.user_id == 1)
-        note = q.first()
-        print(note)
-        print(note.user_id)
-        print(note.message)
-        '''
 
     return app
-    
-    
 
-if __name__ == '__main__':
-    app = create_app()
-    app.run()
+
+def make_celery(app):
+    celery = Celery(
+        app.import_name,
+        backend='redis://localhost:6379',
+        broker='redis://localhost:6379'
+    )
+    celery.conf.update(app.config)
+    celery.conf.beat_schedule = {'unmark-negative-users': {
+        'task': 'app.unmark_negative_users',
+        'schedule': 60.0
+    }, 'compute-like-count': {
+        'task': 'app.compute_like_count',
+        'schedule': 30.0
+    }, 'compute-review-count': {
+        'task': 'app.compute_review_count',
+        'schedule': 30.0
+    }, 'compute-contact-tracing': {
+        'task': 'app.send_notifications',
+        'schedule': 60.0
+    }, 'run-every-1-minute': {
+        'task': 'app.print_hello',
+        'schedule': 3.0
+    }
+
+    }
+
+    class ContextTask(celery.Task):
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return self.run(*args, **kwargs)
+
+    celery.Task = ContextTask
+    return celery
+
+
+app = create_app()
+celery = make_celery(app)
+
+mail = None
+
+
+
+@celery.task
+def print_hello():
+    print('Hello from Celery!')
+
+@celery.task
+def unmark_negative_users():
+    inobservation = db.session.query(Quarantine).filter_by(in_observation=True).all()
+    for quarantined in inobservation:
+        if quarantined.end_date <= datetime.datetime.now():
+            user = db.session.query(User).filter_by(id=quarantined.user_id).first()
+            user.is_active = True  # todo necessario?
+            quarantined.in_observation = False
+            db.session.commit()
+
+
+@celery.task
+def compute_like_count():
+    likes = db.session.query(Like).filter(Like.marked == False).all()
+    for like in likes:
+        restaurant = db.session.query(Restaurant).filter_by(id=like.restaurant_id).first()
+        restaurant.likes += 1
+        like.marked = True
+        db.session.commit()
+
+
+
+
+@celery.task
+def compute_review_count():
+    # new avg reviews= (new reviews+avg old*tot old)/(tot old + tot new)
+    all_new_reviews = db.session.query(Review).filter_by(marked=False).all()
+    for new_review in all_new_reviews:
+        new_rev = db.session.query(Review).filter_by(marked=False, restaurant_id=new_review.restaurant_id,
+                                                     reviewer_id=new_review.reviewer_id).all()
+        count_new_reviews = 0
+        sum_new_reviews = 0
+        for rev in new_rev:
+            sum_new_reviews += rev.rating
+            count_new_reviews += 1
+            rev.marked = True
+            db.session.commit()
+
+        if count_new_reviews == 0:
+            continue
+
+        restaurant = db.session.query(Restaurant).filter_by(id=new_review.restaurant_id).first()
+        restaurant.avg_rating = (sum_new_reviews + (restaurant.avg_rating * restaurant.tot_reviews)) / (
+                restaurant.tot_reviews + count_new_reviews)
+        restaurant.tot_reviews += count_new_reviews
+        db.session.commit()
+
+
+@celery.task
+def send_notifications():
+    notifications = db.session.query(Notification).filter_by(pending=True).all()
+    for notification in notifications:
+        notification.pending = False
+        db.session.commit()
+
+    count = 0
+    for notification in notifications:
+        count += 1
+        user = db.session.query(User).filter_by(id=notification.user_id).first()
+        db.session.commit()
+        send_email('notifica di quarantena', notification.message, [user.email])
+
+    return count
+
+
+def send_email(subject, body, recv):
+    """Background task to send an email with Flask-Mail."""
+    try:
+        msg = Message(subject,
+                      sender=app.config['MAIL_DEFAULT_SENDER'],
+                      recipients=recv)
+        msg.body = body
+        with app.app_context():
+            get_mail_object().send(msg)
+    except Exception as ex:
+        print('impossibile spedire mail a: ' + str(recv) + str(ex))
+
+
+
+
+def get_mail_object():
+    global mail
+    if mail is None:
+        mail = Mail(app)
+    return mail
 

@@ -1,8 +1,10 @@
+import time
 import unittest
-from monolith.background import mail, compute_review_count, send_notifications, unmark_negative_users
-from monolith.background import send_email, get_mail_object, compute_like_count
+from monolith.app import mail, compute_review_count, send_notifications, unmark_negative_users
+from monolith.app import send_email, get_mail_object, compute_like_count
 from monolith.classes.tests.conftest import test_app
 from datetime import datetime
+from datetime import timedelta
 import datetime as dt
 
 from monolith.database import User, db, Restaurant, Like, Review, Notification, Quarantine
@@ -82,6 +84,8 @@ def test_compute_like_count(test_app):
         putLike(user_test2.id, pluto_restaurant.id)
         compute_like_count()
 
+        pluto_restaurant = db.session.query(Restaurant).filter_by(id=pluto_restaurant.id).first()
+        ciccio_restaurant = db.session.query(Restaurant).filter_by(id=ciccio_restaurant.id).first()
         assert (ciccio_restaurant.likes == 1)
         assert (pluto_restaurant.likes == 3)
         compute_like_count()
@@ -89,6 +93,8 @@ def test_compute_like_count(test_app):
         putLike(user_test1.id, ciccio_restaurant.id)
         putLike(user_test2.id, ciccio_restaurant.id)
         compute_like_count()
+        pluto_restaurant = db.session.query(Restaurant).filter_by(id=pluto_restaurant.id).first()
+        ciccio_restaurant = db.session.query(Restaurant).filter_by(id=ciccio_restaurant.id).first()
         assert (ciccio_restaurant.likes == 3)
         assert (pluto_restaurant.likes == 3)
 
@@ -155,6 +161,9 @@ def test_compute_review_count(test_app):
         putReview(user_test1.id, ciccio_restaurant.id, 2)
 
         compute_review_count()
+
+        pluto_restaurant = db.session.query(Restaurant).filter_by(id=pluto_restaurant.id).first()
+        ciccio_restaurant = db.session.query(Restaurant).filter_by(id=ciccio_restaurant.id).first()
         assert (ciccio_restaurant.avg_rating == 2.5)
         assert (pluto_restaurant.avg_rating == 0)
 
@@ -165,14 +174,15 @@ def test_compute_review_count(test_app):
 
         compute_review_count()
 
-
+        pluto_restaurant = db.session.query(Restaurant).filter_by(id=pluto_restaurant.id).first()
+        ciccio_restaurant = db.session.query(Restaurant).filter_by(id=ciccio_restaurant.id).first()
+        assert (ciccio_restaurant.avg_rating == 3)
         assert (pluto_restaurant.avg_rating == 3)
         compute_review_count()
-
-
         compute_review_count()
 
         assert (pluto_restaurant.avg_rating == 3)
+        assert (ciccio_restaurant.avg_rating == 3)
 
 
 def test_send_notifications(test_app):
@@ -212,21 +222,23 @@ def test_send_notifications(test_app):
 
         assert firstNotification.pending == True
         assert secondNotification.pending == True
+        assert db.session.query(User).filter_by(id=user_test.id).first().is_active == True
+        assert db.session.query(User).filter_by(id=user_test1.id).first().is_active == True
 
-        send_notifications()
+        assert send_notifications() == 2
 
         firstNotification= db.session.query(Notification).filter_by(user_id=user_test.id).first()
         secondNotification1 = db.session.query(Notification).filter_by(user_id=user_test1.id).first()
         assert firstNotification.pending == False
         assert secondNotification1.pending == False
 
-        send_notifications()
+        assert send_notifications() == 0
 
+        firstNotification = db.session.query(Notification).filter_by(user_id=user_test.id).first()
+        secondNotification1 = db.session.query(Notification).filter_by(user_id=user_test1.id).first()
         assert firstNotification.pending == False
-        assert secondNotification.pending == False
+        assert secondNotification1.pending == False
 
-        assert db.session.query(User).filter_by(id=user_test.id).first().is_active == False
-        assert db.session.query(User).filter_by(id=user_test1.id).first().is_active == False
 
 
 
@@ -252,14 +264,12 @@ def test_unmark_negative_users(test_app):
                              datetime.now())
         user_test1 = add_user("jackpeps@gmail.com", '3333333333', "firstname", "lastname", "passwo",
                               datetime.now())
-        user_test2 = add_user("likecountuser2@test.com", '3333333333', "firstname", "lastname", "passwo",
-                              datetime.now())
 
-        def putQuarantine(user_id):
+        def putQuarantine(user_id,end_date):
             new_quarantine = Quarantine()
             new_quarantine.user_id = user_id
-            new_quarantine.start_date= dt.date.today()
-            new_quarantine.end_date = dt.date.today()
+            new_quarantine.start_date= dt.datetime.now()
+            new_quarantine.end_date = end_date
             db.session.add(new_quarantine)
             db.session.commit()
             return db.session.query(Quarantine).filter_by(user_id=user_id).first()
@@ -268,29 +278,23 @@ def test_unmark_negative_users(test_app):
 
         user_test.is_active= False
         user_test1.is_active=False
-        user_test2.is_active = False
         db.session.commit()
 
-        firstquarantine = putQuarantine(user_test.id)
+        firstquarantine = putQuarantine(user_test.id,dt.datetime.now())
+        secondquarantine = putQuarantine(user_test1.id,dt.datetime.now()+timedelta(days=1))
+
         unmark_negative_users()
-        secondquarantine = putQuarantine(user_test1.id)
-        thirdquarantine = putQuarantine(user_test1.id)
+
+        user_test=db.session.query(User).filter_by(id=user_test.id).first()
+        user_test1= db.session.query(User).filter_by(id=user_test1.id).first()
+
+        firstquarantine = db.session.query(Quarantine).filter_by(user_id=user_test.id).first()
+        secondquarantine = db.session.query(Quarantine).filter_by(user_id=user_test1.id).first()
 
         assert user_test.is_active == True
-        assert user_test1.is_active == False
-        assert user_test2.is_active == False
+        assert user_test1.is_active == True
 
         assert firstquarantine.in_observation == False
         assert secondquarantine.in_observation == True
-        assert thirdquarantine.in_observation == True
 
-        unmark_negative_users()
-        assert firstquarantine.in_observation == False
-        assert secondquarantine.in_observation == False
-        assert thirdquarantine.in_observation == False
 
-        assert db.session.query(User).filter_by(id=user_test.id).first().is_active == True
-        assert db.session.query(User).filter_by(id=user_test1.id).first().is_active == True
-        assert db.session.query(User).filter_by(id=user_test1.id).first().is_active == True
-
-        

@@ -196,7 +196,7 @@ def reservation(restaurant_id,table_id):
 @login_required
 def _like(restaurant_id):
     q = Like.query.filter_by(liker_id=current_user.id, restaurant_id=restaurant_id)
-    if q.first() != None:
+    if q.first() == None:
         new_like = Like()
         new_like.liker_id = current_user.id
         new_like.restaurant_id = restaurant_id

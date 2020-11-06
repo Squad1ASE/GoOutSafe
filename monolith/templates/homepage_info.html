@@ -28,7 +28,11 @@
 
       {# CUSTOMER #}
       {% if current_user.role == 'customer' %}
-        <a href="/restaurants">See restaurants</a>
+        <a href="/restaurants">See all restaurants!</a>
+        <br>
+        <br>
+        <a href="/restaurants/search">Search restaurants!</a>
+        <br>
         <br>
       {% endif %}
       

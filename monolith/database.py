@@ -264,18 +264,6 @@ class Review(db.Model):
     comment = db.Column(db.Unicode(128))
     date = db.Column(db.Date)
 
-
-class Photo(db.Model):
-    __tablename__ = 'photo'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-
-    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'))
-    restaurant = relationship('Restaurant', foreign_keys='Photo.restaurant_id')
-
-    path = db.Column(db.Unicode(128))
-    description = db.Column(db.Unicode(128))
-
-
 class Dish(db.Model):
     __tablename__ = 'dishes'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)

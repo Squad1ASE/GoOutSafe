@@ -223,20 +223,3 @@ def _do_contact_tracing(positive, start_date):
         db.session.add(notification)
 
     db.session.commit()
-
-    '''
-    print(' -----------------------------------')
-    print(' -----------------------------------')
-    print(' NOTIFICATION:')
-    notifications = db.session.query(Notification).all()
-    for n in notifications:
-        if n.user_id is not None:
-            print('user_id:', n.user_id)
-        print('email:', n.email)
-        print('date:', n.date.strftime("%m/%d/%Y, %H:%M"))
-        print('type:', n.type_)
-        print('message:', n.message)
-        print('pending:', n.pending)
-
-        print(' -----------------------------------')
-    '''

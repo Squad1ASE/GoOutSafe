@@ -3,7 +3,7 @@ from monolith.database import db, Review, Restaurant, Like, WorkingDay, Table, D
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
-from monolith.forms import UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail, ReservationRequest, RestaurantSearch, EditRestaurantForm, ReviewForm
+from monolith.forms import DishForm, UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail, ReservationRequest, RestaurantSearch, EditRestaurantForm, ReviewForm
 from monolith.views import auth
 import datetime
 from flask_wtf import FlaskForm
@@ -461,7 +461,7 @@ def restaurant_edit(restaurant_id):
                     db.session.add(newdish)
 
                 db.session.commit()
-                return make_response(render_template('error.html', message="You have correctly edited! Redirecting to your restaurants", redirect_url="/edit_restaurant_informations"), 200)
+                return make_response(render_template('error.html', message="You have correctly edited! Redirecting to your restaurants", redirect_url="/"), 200)
 
 
             else:
@@ -484,7 +484,7 @@ def restaurant_edit(restaurant_id):
             '''
 
             # will not be empty since from the creation of the restaurant at least one dish was added
-            dishes_to_edit = db.session.query(Dish).filter(Dish.restaurant_id == int(restaurant_id))
+            dishes_to_edit = db.session.query(Dish).filter(Dish.restaurant_id == int(restaurant_id)).all()
             i=0
             for d in dishes_to_edit:
                 form.dishes[i].dish_name.data = d.dish_name

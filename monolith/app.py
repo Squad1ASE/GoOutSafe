@@ -1,7 +1,7 @@
 import os
 from flask import Flask
 from monolith.database import db, User, Restaurant, Table, WorkingDay
-from monolith.database import Reservation, Like, Seat, Review, Photo
+from monolith.database import Reservation, Like, Seat, Review
 from monolith.database import Dish, Quarantine
 from monolith.database import Notification
 from monolith.views import blueprints

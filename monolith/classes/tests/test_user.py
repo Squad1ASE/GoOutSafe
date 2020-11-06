@@ -1,7 +1,7 @@
 from monolith.database import db, User
 from monolith.classes.tests.conftest import test_app
 from monolith.utilities import create_user_EP, user_login_EP, user_logout_EP, edit_user_EP, customers_example, reservation_guests_email_example, reservation_guests_number_example
-from monolith.utilities import reservation_dates_example, reservation_times_example
+from monolith.utilities import reservation_dates_example, reservation_times_example, insert_ha
 from monolith.utilities import restaurant_reservation_POST_EP, restaurant_owner_example, restaurant_example, create_restaurant_EP, insert_admin
 import datetime
 from sqlalchemy import exc
@@ -330,4 +330,18 @@ def test_users_reservation(test_app):
     assert test_client.post('/users/editreservation/1', data=guests_email_dict, follow_redirects=True).status_code == 222
 
     assert test_client.get('/users/deletereservation/1', follow_redirects=True).status_code == 200
+
+    assert test_client.get('/users/editreservation/100', follow_redirects=True).status_code == 200
+
+    insert_ha(db, app)
+
+    assert user_logout_EP(test_client).status_code == 200
+
+    assert user_login_EP(test_client, 'healthauthority@ha.com', 'ha').status_code == 200
+
+    assert test_client.get('/users/reservation_list', follow_redirects=True).status_code == 403
+
+    assert test_client.get('/users/editreservation/1', follow_redirects=True).status_code == 403
+
+    assert test_client.get('/users/deletereservation/1', follow_redirects=True).status_code == 403
 

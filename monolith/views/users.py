@@ -92,6 +92,9 @@ def edit_user():
 @login_required
 def reservation_list():
 
+    if (current_user.role == 'ha' or current_user.role == 'owner'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
+
     reservation_records = db.session.query(Reservation).filter(
         Reservation.booker_id == current_user.id, 
         Reservation.cancelled == False,
@@ -115,6 +118,9 @@ def reservation_list():
 @login_required
 def deletereservation(reservation_id):
 
+    if (current_user.role == 'ha' or current_user.role == 'owner'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
+
     q = Reservation.query.filter_by(id = reservation_id).first()
 
     if q is not None:
@@ -133,6 +139,9 @@ def deletereservation(reservation_id):
 @users.route('/users/editreservation/<reservation_id>', methods=['GET','POST'])
 @login_required
 def editreservation(reservation_id):
+
+    if (current_user.role == 'ha' or current_user.role == 'owner'):
+        return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
 
     q = Reservation.query.filter_by(id = reservation_id).first()
     
@@ -161,13 +170,6 @@ def editreservation(reservation_id):
                 if form.validate_on_submit():
 
                     for i, email_field in enumerate(form.guest.data):
-
-                        #if(email_field['email'] != guests_email_list[i]):
-                            
-                         #   if(email_field['email'] == ""):
-                          #      seat_query[i].confirmed = False
-                           # else:
-                             #   seat_query[i].confirmed = email_field['email']
 
                         seat_query[i].guests_email = email_field['email']
                     

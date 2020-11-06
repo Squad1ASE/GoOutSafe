@@ -332,7 +332,7 @@ def _like(restaurant_id):
         return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
 
     q = Like.query.filter_by(liker_id=current_user.id, restaurant_id=restaurant_id)
-    if q.first() != None:
+    if q.first() == None:
         new_like = Like()
         new_like.liker_id = current_user.id
         new_like.restaurant_id = restaurant_id
@@ -346,6 +346,9 @@ def _like(restaurant_id):
 @restaurants.route('/restaurants/search', methods=['GET', 'POST'])
 @login_required
 def search():
+
+    if (current_user.role == 'ha'):
+        return make_response(render_template('error.html', message="You can't search for restaurants! Redirecting to home page", redirect_url="/"), 403)
 
     form = RestaurantSearch()
 

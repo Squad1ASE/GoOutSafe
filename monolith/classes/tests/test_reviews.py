@@ -127,6 +127,7 @@ def test_component_reviews(test_app):
     assert test_client.get('/restaurants/reviews/'+str(restaurant.id), follow_redirects=True).status_code == 200
     assert create_review_EP(test_client, review, restaurant.id).status_code == 200
     assert test_client.get('/restaurants/like/'+str(restaurant.id)).status_code == 200
+    assert test_client.get('/restaurants/like/'+str(restaurant.id)).status_code == 200
 
     assert test_client.get('/restaurants', follow_redirects=True).status_code == 200
 

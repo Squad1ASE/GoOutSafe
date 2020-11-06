@@ -1098,7 +1098,7 @@ def test_restaurant_reservation_as_positive(test_app):
         create_user_EP(test_client,**ro)
 
     # create healthauthority
-    create_user_EP(test_client, **health_authority_example)
+    insert_ha(db, app)
 
     for usr_idx,restaurant in enumerate(restaurant_example):
         user_login_EP(test_client, restaurant_owner_example[usr_idx]['email'], 
@@ -1173,3 +1173,8 @@ def test_restaurant_search(test_app):
     filter['cuisine_type'] = [1,2]
 
     assert test_client.post('/restaurants/search', data=filter, follow_redirects=True).status_code == 200
+
+    insert_ha(db, app)
+    assert test_client.get('/logout', follow_redirects=True).status_code == 200
+    assert user_login_EP(test_client, 'healthauthority@ha.com', 'ha').status_code == 200
+    assert test_client.post('/restaurants/search', data=filter, follow_redirects=True).status_code == 403

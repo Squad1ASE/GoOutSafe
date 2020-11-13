@@ -6,6 +6,19 @@
       {# HA #}
       {% if current_user.role == 'ha' %}
         <h2><a href="/patient_informations">Get patient informations</a></h2>
+        <br>
+
+        {% if possible_infected %}
+        <h2>People who have been in contact with a positive in the past 14 days: </h2>
+          <ul>
+            {% for pi in possible_infected: %}
+            <li>
+                {{pi.date.strftime('%d/%m/%Y')}}  {{pi.email}}  {{pi.phone}}  {{pi.firstname}}  {{pi.lastname}}     
+            </li>
+            {% endfor %}
+          </ul>
+        <br> 
+        {% endif %}
       {% endif %}
 
 

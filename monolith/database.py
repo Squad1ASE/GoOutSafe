@@ -207,7 +207,7 @@ class WorkingDay(db.Model):
                     raise ValueError("incorrect format for hour")
         return work_shifts
 
-# is like a pretty rating implementation
+
 class Like(db.Model):
     __tablename__ = 'like'
 
@@ -263,6 +263,7 @@ class Review(db.Model):
     rating = db.Column(db.Integer)
     comment = db.Column(db.Unicode(128))
     date = db.Column(db.Date)
+
 
 class Dish(db.Model):
     __tablename__ = 'dishes'

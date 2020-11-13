@@ -1,9 +1,70 @@
-web:
-  build: .
-  dockerfile: Dockerfile
-  environment: 
+version: "3"
+services:
+  flask:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    environment: 
     - FLASK_RUN_HOST=0.0.0.0
     - FLASK_APP=monolith/app.py
-  ports:
-    - "5000:5000"
-  command: flask run
+    - CELERY_BROKER_URL=redis://redis:6379
+    - CELERY_BACKEND_URL=redis://redis:6379
+    - PYTHONPATH=monolith/
+    ports:
+      - "5000:5000"
+    links:
+      - redis-service
+      - celery
+      - celery-beat
+    networks:
+      - default
+    command: flask run
+    volumes:
+      - .:/gooutsafe
+
+  celery:
+    build: 
+      context: .
+    environment: 
+      - CELERY_BROKER_URL=redis://redis:6379
+      - CELERY_BACKEND_URL=redis://redis:6379
+      - PYTHONPATH=monolith/
+    command: "celery -A monolith.app.celery worker -l info"
+    user: root
+    networks:
+      - default
+    links:
+      - redis-service
+    depends_on:
+      - redis-service
+    volumes:
+      - .:/gooutsafe
+        
+  celery-beat:
+    build: 
+      context: .
+    environment: 
+      - CELERY_BROKER_URL=redis://redis:6379
+      - CELERY_BACKEND_URL=redis://redis:6379
+      - PYTHONPATH=monolith/
+    command: "celery -A monolith.app.celery beat -l info"
+    user: root
+    networks:
+      - default
+    links:
+      - redis-service
+    depends_on:
+      - redis-service
+    volumes:
+      - .:/gooutsafe
+
+  redis-service:
+    container_name: redis
+    restart: always
+    networks:
+      - default
+    image: redis:latest
+    ports:
+      - 6379:6379
+    volumes:
+      - .:/gooutsafe

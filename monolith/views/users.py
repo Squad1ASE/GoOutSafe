@@ -138,11 +138,11 @@ def delete_user():
         for user_seat in all_user_seat:
             
             # first notify all guests for the removing of seat            
-            for guest_email in user_set.guests_email: 
+            for guest_email in user_seat.guests_email: 
                 if(guest_email != user_to_delete.email):
 
-                    user_to_notify = db.session.query(User).filter(User.email == guest_email.email).first()
-                    if user_to_notify is not None: #notify all guests who are registered
+                    user_to_notify = db.session.query(User).filter(User.email == guest_email).first()
+                    if user_to_notify is not None: #notify all guests who are registered                                                
                         new_dict = dict(
                             user_id=user_to_nofitfy.id, 
                             email=guest_email, 
@@ -183,7 +183,7 @@ def delete_user():
     all_user_review = db.session.query(Review).filter(Review.reviewer_id == user_to_delete.id).all()
     for user_review in all_user_review:
         # how does restaurant know that the review is not more available?
-        # adjusting it's review counter and avg rating is enough is enough?
+        # adjusting it's review counter and avg rating is enough?
         if user_review.marked == True:
             rest_to_disreview = db.session.query(Restaurant).filter(Restaurant.id == user_review.restaurant_id).first()
             rest_to_disreview.tot_reviews = rest_to_disreview.tot_reviews - 1
@@ -191,10 +191,9 @@ def delete_user():
             db.session.commit(rest_to_disreview) # commit changes about the review counter and avg of the linked restaurant
         db.session.delete(user_review)
 
-
-    # till now were deleted all operations available to a customer
-    if( user_to_delete.role == 'customer'):
-        print('customer ta eliminare')
+    
+    if( user_to_delete.role == 'customer'): # till now were deleted all operations available to a customer
+        print('customer da eliminare')
         db.session.delete(user_to_delete)
         db.session.commit()
 

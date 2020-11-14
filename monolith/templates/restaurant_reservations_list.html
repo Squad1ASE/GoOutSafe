@@ -1,0 +1,14 @@
+<html>
+  <body>
+    <h1>Reservations list</h1>
+    <h5>{{message}}</h5>
+    <ul>
+      {% for reservation in reservations: %}
+      <h3>{{reservation.restaurant_name}}</h3>
+      <li>
+      Date: {{reservation.date}}         Table: {{reservation.table_name}}         Guests: {{reservation.number_of_guests}}         Booker: {{reservation.booker_fn}}{{reservation.booker_ln}},{{reservation.booker_phone}}   
+      </li>
+      {% endfor %}
+    </ul>
+  </body>
+</html>

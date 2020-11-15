@@ -613,3 +613,42 @@ def create_review(restaurant_id):
 
     else:
         return render_template("reviews_owner.html", reviews=reviews), 555
+
+@restaurants.route('/restaurants/reservation_list', methods=['GET'])
+@login_required
+def reservation_list():
+    if current_user is not None and hasattr(current_user, 'id'):
+
+        if (current_user.role == 'ha' or current_user.role == 'customer'):
+            return make_response(render_template('error.html', message="You are not an owner! Redirecting to home page", redirect_url="/"), 403)
+        
+        data_dict = []
+        restaurants_records = db.session.query(Restaurant).filter(Restaurant.owner_id == current_user.id)
+
+        for restaurant in restaurants_records:
+            
+            reservation_records = db.session.query(Reservation).filter(
+                Reservation.restaurant_id == restaurant.id, 
+                Reservation.cancelled == False,
+                Reservation.date >= datetime.datetime.now()
+            ).all()
+
+            for reservation in reservation_records:
+                booker = db.session.query(User).filter(User.id == reservation.booker_id).first()
+                seat = db.session.query(Seat).filter(Seat.reservation_id == reservation.id).all()
+                table = db.session.query(Table).filter(Table.id == reservation.table_id).first()
+                temp_dict = dict(
+                    restaurant_name = restaurant.name,
+                    date = reservation.date,
+                    table_name = table.table_name,
+                    number_of_guests = len(seat),
+                    booker_fn = booker.firstname,
+                    booker_ln = booker.lastname,
+                    booker_phone = booker.phone
+                )
+                data_dict.append(temp_dict)
+
+        data_dict = sorted(data_dict, key = lambda i: (i['restaurant_name'],i['date']))
+
+                
+    return render_template('restaurant_reservations_list.html', reservations=data_dict)

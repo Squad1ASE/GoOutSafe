@@ -2,7 +2,7 @@ from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Res
 from monolith.classes.tests.conftest import test_app
 from monolith.utilities import create_user_EP, user_login_EP, user_logout_EP, create_restaurant_EP, customers_example, restaurant_example, restaurant_owner_example
 from monolith.utilities import reservation_times_example, reservation_guests_number_example, reservation_guests_email_example, restaurant_reservation_EP, reservation_dates_example
-from monolith.utilities import restaurant_reservation_GET_EP, restaurant_reservation_POST_EP
+from monolith.utilities import restaurant_reservation_GET_EP, restaurant_reservation_POST_EP, confirm_participants_EP
 from monolith.utilities import health_authority_example, mark_patient_as_positive, insert_ha
 import json
 from sqlalchemy import exc
@@ -1178,3 +1178,84 @@ def test_restaurant_search(test_app):
     assert test_client.get('/logout', follow_redirects=True).status_code == 200
     assert user_login_EP(test_client, 'healthauthority@ha.com', 'ha').status_code == 200
     assert test_client.post('/restaurants/search', data=filter, follow_redirects=True).status_code == 403
+
+
+
+def test_restaurant_participants_confirmation(test_app):
+    app, test_client = test_app
+
+    # create customers
+    for user in customers_example:
+        create_user_EP(test_client,**user)
+
+    # create restaurant owners
+    for ro in restaurant_owner_example:
+        create_user_EP(test_client,**ro)
+
+    # create the restaurants
+    for usr_idx,restaurant in enumerate(restaurant_example):
+        user_login_EP(test_client, restaurant_owner_example[usr_idx]['email'], restaurant_owner_example[usr_idx]['password'])
+
+        create_restaurant_EP(test_client,restaurant)
+
+        user_logout_EP(test_client)
+
+    with app.app_context():
+        #get a user, the owner
+        user = db.session.query(User).filter_by(email=restaurant_owner_example[0]['email']).first()
+        # get his restaurant
+        restaurant = db.session.query(Restaurant).filter_by(owner_id = user.id).first()
+
+
+    # login with a customer (200)
+    assert user_login_EP(test_client, customers_example[2]['email'], customers_example[2]['password']).status_code == 200
+
+    # create a reservation for now
+    assert restaurant_reservation_EP(test_client, 
+                                        restaurant.id, 
+                                        #str(datetime.date.today().day),
+                                        datetime.datetime.today().strftime("%d/%m/%Y"),
+                                        datetime.datetime.today().strftime("%H:%M"),
+                                        #(str(datetime.datetime.now().hour) + ':' + str(datetime.datetime.now().minute)), 
+                                        2).status_code == 200
+
+    guests_email_dict = dict()
+    for i in range(1):
+        key = 'guest-'+str(i)+'-email'
+        #guests_email_dict[key] = 'mail' + str(i) + '@mail.com'
+        guests_email_dict[key] = reservation_guests_email_example[i]
+
+    #reservation_date_str = str(datetime.date.today()) + ' ' +  str(datetime.datetime.now().hour) + ':' + str(datetime.datetime.now().minute)#'10/10/2030' + " " + reservation_times_example[14]
+    reservation_date_str = datetime.datetime.today().strftime("%d/%m/%Y %H:%M")
+    assert restaurant_reservation_POST_EP(
+            test_client,
+            str(restaurant.id),
+            '8',
+            reservation_date_str,
+            '2',
+            guests_email_dict
+        ).status_code == 666
+
+    # logout with the customer and login with the owner
+    assert user_logout_EP(test_client).status_code == 200
+    assert user_login_EP(test_client, restaurant_owner_example[0]['email'], restaurant_owner_example[0]['password']).status_code == 200
+
+    # confirm participants (200)
+    confirmation = dict(
+        confirmed0 = reservation_guests_email_example[0]
+    )
+    with app.app_context():
+        customer = db.session.query(User).filter_by(email=customers_example[2]['email']).first()
+        reservation = db.session.query(Reservation).filter_by(restaurant_id=restaurant.id).filter_by(booker_id=customer.id).first()
+
+    assert test_client.get('/restaurants/' + str(restaurant.id) + '/reservation/' + str(reservation.id), follow_redirects=True).status_code == 200
+    assert confirm_participants_EP(test_client, restaurant.id, reservation.id, confirmation).status_code == 200
+
+    # double confirm (403)
+    assert confirm_participants_EP(test_client, restaurant.id, reservation.id, confirmation).status_code == 403
+
+    #TODO:--------------------
+    # create a reservation in the future
+    # confirm participants for this reservation (403)
+    # confirm with health_authority (GET) (403)
+    # confirm with other restaurants owner (GET) (403)

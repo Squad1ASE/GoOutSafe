@@ -379,6 +379,9 @@ def restaurant_reservation_POST_EP(test_client, restaurant_id, table_id_reservat
 def create_review_EP(test_client, data_dict, rest_id):
     return test_client.post('/restaurants/reviews/'+str(rest_id), data=data_dict, follow_redirects=True)
 
+def confirm_participants_EP(test_client, restaurant_id, reservation_id, data_dict):
+    return test_client.post('/restaurants/' + str(restaurant_id) + '/reservation/' + str(reservation_id), data=data_dict, follow_redirects=True)
+
 
 # --- UTILITIES HEALTHAUTHORITY ---
 def mark_patient_as_positive(test_client, patient_mail):

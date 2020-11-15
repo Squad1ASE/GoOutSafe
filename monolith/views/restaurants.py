@@ -632,7 +632,6 @@ def confirm_participants(restaurant_id, reservation_id):
     form = ConfirmedSeatFormTest()
 
     guests = []
-    confirmed = []
     
     for seat in seats:
         if seat.confirmed == True:
@@ -646,12 +645,11 @@ def confirm_participants(restaurant_id, reservation_id):
         for key in request.form:
             if key != 'csrf_token':
                 email = request.form[key]
-                confirmed.append(email)
                 seat = db.session.query(Seat).filter_by(guests_email=email).filter_by(reservation_id=reservation_id).first()
                 seat.confirmed = True
                 db.session.commit()
 
-        #TODO: maybe create an apposite page that listing all confirmed participants
+        #TODO: maybe create an apposite page that lists all confirmed participants
         return make_response(render_template('error.html', message="Participants confirmed", redirect_url="/"), 200)
 
 

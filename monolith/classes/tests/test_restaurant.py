@@ -1,12 +1,14 @@
 from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Reservation, Quarantine
 from monolith.classes.tests.conftest import test_app
 from monolith.utilities import create_user_EP, user_login_EP, user_logout_EP, create_restaurant_EP, customers_example, restaurant_example, restaurant_owner_example
-from monolith.utilities import reservation_times_example, reservation_guests_number_example, reservation_guests_email_example, restaurant_reservation_EP, reservation_dates_example
+from monolith.utilities import restaurant_h24_example, reservation_times_example, reservation_guests_number_example, reservation_guests_email_example, restaurant_reservation_EP, reservation_dates_example
 from monolith.utilities import restaurant_reservation_GET_EP, restaurant_reservation_POST_EP, confirm_participants_EP
 from monolith.utilities import health_authority_example, mark_patient_as_positive, insert_ha
 import json
 from sqlalchemy import exc
 import datetime
+from datetime import timedelta
+
 
 
 def check_restaurants(restaurant_to_check, restaurant):
@@ -1192,13 +1194,10 @@ def test_restaurant_participants_confirmation(test_app):
     for ro in restaurant_owner_example:
         create_user_EP(test_client,**ro)
 
-    # create the restaurants
-    for usr_idx,restaurant in enumerate(restaurant_example):
-        user_login_EP(test_client, restaurant_owner_example[usr_idx]['email'], restaurant_owner_example[usr_idx]['password'])
-
-        create_restaurant_EP(test_client,restaurant)
-
-        user_logout_EP(test_client)
+    # create a restaurant open every day at any time
+    assert user_login_EP(test_client, restaurant_owner_example[0]['email'], restaurant_owner_example[0]['password']).status_code == 200
+    assert create_restaurant_EP(test_client, restaurant_h24_example).status_code == 200
+    assert user_logout_EP(test_client).status_code == 200
 
     with app.app_context():
         #get a user, the owner
@@ -1254,8 +1253,51 @@ def test_restaurant_participants_confirmation(test_app):
     # double confirm (403)
     assert confirm_participants_EP(test_client, restaurant.id, reservation.id, confirmation).status_code == 403
 
-    #TODO:--------------------
+    assert user_logout_EP(test_client).status_code == 200
+    assert user_login_EP(test_client, customers_example[2]['email'], customers_example[2]['password']).status_code == 200
+
+
     # create a reservation in the future
+    assert restaurant_reservation_EP(test_client, 
+                                        restaurant.id, 
+                                        (datetime.datetime.today() + timedelta(days=1)).strftime("%d/%m/%Y"),
+                                        (datetime.datetime.today() + timedelta(days=1)).strftime("%H:%M"),
+                                        2).status_code == 200
+
+    guests_email_dict = dict()
+    for i in range(1):
+        key = 'guest-'+str(i)+'-email'
+        #guests_email_dict[key] = 'mail' + str(i) + '@mail.com'
+        guests_email_dict[key] = reservation_guests_email_example[i]
+
+    #reservation_date_str = str(datetime.date.today()) + ' ' +  str(datetime.datetime.now().hour) + ':' + str(datetime.datetime.now().minute)#'10/10/2030' + " " + reservation_times_example[14]
+    reservation_date_str = (datetime.datetime.today() + timedelta(days=1)).strftime("%d/%m/%Y %H:%M")
+    assert restaurant_reservation_POST_EP(
+            test_client,
+            str(restaurant.id),
+            '8',
+            reservation_date_str,
+            '2',
+            guests_email_dict
+        ).status_code == 666
+
+    # logout with the customer and login with the owner
+    assert user_logout_EP(test_client).status_code == 200
+    assert user_login_EP(test_client, restaurant_owner_example[0]['email'], restaurant_owner_example[0]['password']).status_code == 200
+
     # confirm participants for this reservation (403)
+    assert confirm_participants_EP(test_client, restaurant.id, reservation.id, confirmation).status_code == 403
+
+    with app.app_context():
+        insert_ha(db, app)
+
     # confirm with health_authority (GET) (403)
+    assert user_logout_EP(test_client).status_code == 200
+    assert user_login_EP(test_client, "healthauthority@ha.com", "ha").status_code == 200
+    assert test_client.get('/restaurants/' + str(restaurant.id) + '/reservation/' + str(reservation.id), follow_redirects=True).status_code == 403
+
+    
     # confirm with other restaurants owner (GET) (403)
+    assert user_logout_EP(test_client).status_code == 200
+    assert user_login_EP(test_client, restaurant_owner_example[1]['email'], restaurant_owner_example[1]['password']).status_code == 200
+    assert test_client.get('/restaurants/' + str(restaurant.id) + '/reservation/' + str(reservation.id), follow_redirects=True).status_code == 403

@@ -141,11 +141,31 @@ def test_contact_tracing_health_authority(test_app):
         restaurant = db.session.query(Restaurant).filter(Restaurant.name == temp_restaurant_example['name']).first()
     assert restaurant is not None 
 
-    # make a reservation
+    # login user
     user_logout_EP(test_client)
     assert user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password']).status_code == 200
 
+    # make reservation 1
     date = datetime.datetime.now() - timedelta(days=2)
+    timestamp = date.strftime("%d/%m/%Y")
+    assert restaurant_reservation_EP(test_client, 
+                                     restaurant.id, 
+                                     timestamp,
+                                     '20:00', 
+                                     '2').status_code == 200
+
+    reservation_date_str = timestamp + ' 20:00'
+    assert restaurant_reservation_POST_EP(
+        test_client,
+        str(restaurant.id),
+        '1',
+        reservation_date_str,
+        '2',
+        { 'guest-0-email':'notified01@ex.com'}
+    ).status_code == 666
+
+    # make reservation 2
+    date = datetime.datetime.now() + timedelta(days=2)
     timestamp = date.strftime("%d/%m/%Y")
     assert restaurant_reservation_EP(test_client, 
                                      restaurant.id, 
@@ -174,4 +194,4 @@ def test_contact_tracing_health_authority(test_app):
     # test notification
     with app.app_context():
         notifications = db.session.query(Notification).all()
-        assert len(notifications) == 2
+        assert len(notifications) == 3

@@ -1,5 +1,5 @@
 from flask import Blueprint, redirect, render_template, request, make_response, url_for
-from monolith.database import db, User, Quarantine, Seat, Reservation, Notification, Restaurant
+from monolith.database import db, User, Quarantine, Seat, Reservation, Notification, Restaurant, Table
 from monolith.auth import admin_required
 from monolith.forms import GetPatientInformationsForm
 from flask_login import (current_user, login_user, logout_user,
@@ -77,6 +77,9 @@ def get_patient_informations():
 
             # do contact tracing
             _do_contact_tracing(getuser, quarantine.start_date)
+
+            # if the positive is in some future reservation (in the next 14 days) the owners of the restaurants concerned must be notified
+            _check_future_reservations(getuser, quarantine.start_date)
                 
             # this redirect isn't an error, it display that patient has been successfully marked positive
             return make_response(render_template('error.html', message="Patient marked as positive", redirect_url="/"), 555)     
@@ -223,3 +226,49 @@ def _do_contact_tracing(positive, start_date):
         db.session.add(notification)
 
     db.session.commit()
+
+
+def _check_future_reservations(positive, start_date):
+    # first retrieve the reservations of the last 14 days in which the positive was present
+    post_date = start_date + timedelta(days=14)
+    user_reservations = db.session.query(Seat)\
+        .join(Reservation, Reservation.id == Seat.reservation_id)\
+        .filter(
+            Seat.guests_email != None
+        )\
+        .filter(
+            Seat.guests_email == positive.email,
+            Reservation.cancelled == False,
+            Reservation.date >= start_date,
+            Reservation.date <= post_date
+        )\
+        .with_entities(
+            Reservation.date, 
+            Reservation.booker_id,
+            Reservation.restaurant_id,
+            Reservation.table_id
+        )\
+        .all()\
+
+    if len(user_reservations) > 0:
+        # create notifications for owners to warnm them
+        now = datetime.datetime.now()
+        for date, booker_id, restaurant_id, table_id in user_reservations:
+            restaurant = db.session.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+            table = db.session.query(Table).filter(Table.id == table_id).first()
+            booker = db.session.query(User).filter(User.id == booker_id).first()
+
+            notification = Notification()
+            notification.email = restaurant.owner.email
+            notification.date = now
+            notification.type_ = Notification.TYPE(3)
+            
+            timestamp = date.strftime("%d/%m/%Y, %H:%M")
+            message = 'The reservation of ' + timestamp + ' at table "' + table.table_name + '" of restaurant "' + restaurant.name + '" has a positive among the guests.'
+            message = message + ' Contact the booker by email "' + booker.email + '" or by phone ' + booker.phone
+            notification.message = message
+            notification.user_id = restaurant.owner.id
+
+            db.session.add(notification)
+
+        db.session.commit()

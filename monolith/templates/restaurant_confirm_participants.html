@@ -1,0 +1,35 @@
+<html>
+  <body>
+    <h1>Guest List list</h1>
+    <h5>{{message}}</h5>
+    <!--ul>
+      {% for guest in guests: %}
+      <li>
+      {{guest}} <input type="checkbox" name="confirmed" value="confirmed" checked>
+      </li>
+      {% endfor %}
+    </ul-->
+
+    <form action="" method="POST">
+      {{ form.hidden_tag() }}
+      <ul>
+        {% if current_user.is_authenticated %}
+          <!--{% for guest in form['guests']: %}
+            <li>
+              {{guest}} <input type="checkbox" name="confirmed" value="True" checked>
+            </li>
+          {% endfor %}-->
+          {% for guest in guests: %}
+            <li>
+              {{guest}} <input type="checkbox" name="confirmed{{loop.index}}" value={{guest}} checked>
+            </li>
+      {% endfor %}
+        {% endif %}
+        </ul>
+      <input type=submit value="Confirm">
+    </form>
+
+    <br>
+    <a href="/logout">Logout</a>
+  </body>
+</html>

@@ -12,7 +12,6 @@
             {{ form.hidden_tag() }}
             <ul>
               {% if current_user.is_authenticated %}
-                <ul>
                   <dt>{{ form['rating'].label }}</dt>
                   <select id="select-rate" name="rating">
                     {% for i in range(5) %}

@@ -343,7 +343,7 @@ def reservation(restaurant_id):
                     seat = Seat()
                     seat.reservation_id = reservation.id
                     seat.guests_email = emailField['email']
-                    seat.confirmed = True
+                    seat.confirmed = False
 
                     db.session.add(seat)
 
@@ -351,7 +351,7 @@ def reservation(restaurant_id):
                 seat = Seat()
                 seat.reservation_id = reservation.id
                 seat.guests_email = current_user.email
-                seat.confirmed = True
+                seat.confirmed = False
 
                 db.session.add(seat)
 
@@ -565,7 +565,6 @@ def create_review(restaurant_id):
     restaurantRecord = db.session.query(Restaurant).filter_by(id = int(restaurant_id)).all()[0]
 
     reviews = Review.query.filter_by(restaurant_id=int(restaurant_id)).all()
-    ratings = 5
 
     # get the first resrvation ordered by date
     reservation = Reservation.query.order_by(Reservation.date).filter_by(booker_id = int(current_user.id)).first()
@@ -602,7 +601,8 @@ def create_review(restaurant_id):
             db.session.commit()
             # after the review don't show the possibility to add another review
             reviews = Review.query.filter_by(restaurant_id=int(restaurant_id)).all()
-            return render_template("reviews_owner.html", reviews=reviews), 200
+            #return render_template("reviews_owner.html", reviews=reviews), 200
+            return make_response(render_template('error.html', message="Review has been placed", redirect_url="/restaurants/reviews/"+restaurant_id), 200)
 
         else:
             return render_template("reviews.html", form=form,reviews=reviews), 400
@@ -623,14 +623,14 @@ def reservation_list():
             return make_response(render_template('error.html', message="You are not an owner! Redirecting to home page", redirect_url="/"), 403)
         
         data_dict = []
-        restaurants_records = db.session.query(Restaurant).filter(Restaurant.owner_id == current_user.id)
+        restaurants_records = db.session.query(Restaurant).filter(Restaurant.owner_id == current_user.id).all()
 
         for restaurant in restaurants_records:
             
             reservation_records = db.session.query(Reservation).filter(
                 Reservation.restaurant_id == restaurant.id, 
                 Reservation.cancelled == False,
-                Reservation.date >= datetime.datetime.now()
+                Reservation.date >= datetime.datetime.now() - timedelta(hours=3)
             ).all()
 
             for reservation in reservation_records:
@@ -639,12 +639,14 @@ def reservation_list():
                 table = db.session.query(Table).filter(Table.id == reservation.table_id).first()
                 temp_dict = dict(
                     restaurant_name = restaurant.name,
+                    restaurant_id = restaurant.id,
                     date = reservation.date,
                     table_name = table.table_name,
                     number_of_guests = len(seat),
                     booker_fn = booker.firstname,
                     booker_ln = booker.lastname,
-                    booker_phone = booker.phone
+                    booker_phone = booker.phone,
+                    reservation_id = reservation.id
                 )
                 data_dict.append(temp_dict)
 
@@ -652,3 +654,55 @@ def reservation_list():
 
                 
     return render_template('restaurant_reservations_list.html', reservations=data_dict)
+
+
+@restaurants.route('/restaurants/<restaurant_id>/reservation/<reservation_id>', methods=['GET', 'POST'])
+@login_required
+def confirm_participants(restaurant_id, reservation_id):
+    
+    if (current_user.role == 'ha' or current_user.role == 'customer'):
+        return make_response(render_template('error.html', message="You are not an owner! Redirecting to home page", redirect_url="/"), 403)
+
+    restaurant = db.session.query(Restaurant).filter_by(id=restaurant_id).first()
+    if (current_user.id != restaurant.owner_id):
+        return make_response(render_template('error.html', message="You are not the owner of this restaurant! Redirecting to home page", redirect_url="/"), 403)
+
+    # check if the reservation is in the past or in the future
+
+    reservation = db.session.query(Reservation).filter_by(id=reservation_id).first()
+    if (reservation.date <= datetime.datetime.now() - timedelta(hours=3) or reservation.date >= datetime.datetime.now()):
+        return make_response(render_template('error.html', message="You can't confirm participants for this reservation!", redirect_url="/restaurants/reservation_list"), 403)
+
+    # get the guests in this reservation
+
+    seats = db.session.query(Seat).filter_by(reservation_id=reservation_id).all()
+
+    class ConfirmedSeatFormTest(FlaskForm):
+        guests = f.FieldList(f.BooleanField())
+        display = ['guests']
+
+    form = ConfirmedSeatFormTest()
+
+    guests = []
+    
+    for seat in seats:
+        if seat.confirmed == True:
+            # in this case the participants are already confirmed by the owner
+            return make_response(render_template('error.html', message="Participants are already confirmed for this reservation", redirect_url="/restaurants/reservation_list"), 403)
+        guests.append(seat.guests_email)
+
+    if request.method == 'POST':
+        
+        # get all the confirmed participants
+        for key in request.form:
+            if key != 'csrf_token':
+                email = request.form[key]
+                seat = db.session.query(Seat).filter_by(guests_email=email).filter_by(reservation_id=reservation_id).first()
+                seat.confirmed = True
+                db.session.commit()
+
+        #TODO: maybe create an apposite page that lists all confirmed participants
+        return make_response(render_template('error.html', message="Participants confirmed", redirect_url="/"), 200)
+
+
+    return render_template('restaurant_confirm_participants.html', guests=guests, form=form)

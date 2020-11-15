@@ -251,7 +251,7 @@ class Seat(db.Model):
 
     guests_email = db.Column(db.String)  
 
-    confirmed = db.Column(db.Boolean, default=True)
+    confirmed = db.Column(db.Boolean, default=False)
 
 
 class Review(db.Model):

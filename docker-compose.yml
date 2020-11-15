@@ -10,51 +10,13 @@ services:
     - CELERY_BROKER_URL=redis://redis:6379
     - CELERY_BACKEND_URL=redis://redis:6379
     - PYTHONPATH=monolith/
+    command: /bin/sh celery_entry.sh
     ports:
       - "5000:5000"
     links:
       - redis-service
-      - celery
-      - celery-beat
     networks:
       - default
-    command: flask run
-    volumes:
-      - .:/gooutsafe
-
-  celery:
-    build: 
-      context: .
-    environment: 
-      - CELERY_BROKER_URL=redis://redis:6379
-      - CELERY_BACKEND_URL=redis://redis:6379
-      - PYTHONPATH=monolith/
-    command: "celery -A monolith.app.celery worker -l info"
-    user: root
-    networks:
-      - default
-    links:
-      - redis-service
-    depends_on:
-      - redis-service
-    volumes:
-      - .:/gooutsafe
-        
-  celery-beat:
-    build: 
-      context: .
-    environment: 
-      - CELERY_BROKER_URL=redis://redis:6379
-      - CELERY_BACKEND_URL=redis://redis:6379
-      - PYTHONPATH=monolith/
-    command: "celery -A monolith.app.celery beat -l info"
-    user: root
-    networks:
-      - default
-    links:
-      - redis-service
-    depends_on:
-      - redis-service
     volumes:
       - .:/gooutsafe
 
@@ -64,7 +26,7 @@ services:
     networks:
       - default
     image: redis:latest
-    ports:
-      - 6379:6379
+    expose:
+      - 6379
     volumes:
       - .:/gooutsafe

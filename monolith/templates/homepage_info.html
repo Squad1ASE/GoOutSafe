@@ -80,15 +80,16 @@
           <h2>Notifications: </h2>
           {% for notification in notifications %}
           <ul>
-            <h4>
-              {% if notification.type_ == 1 %}
+              {% if notification.type_|string() == '1' %}
                 <b>contact with positive</b>
               {% endif %}
-              {% if notification.type_ == 2 %}
+              {% if notification.type_|string() == '2' %}
                 <b>reservation canceled</b>
               {% endif %}
-                  ({{notification.date.strftime('%d/%m/%Y, %H:%M')}}):  {{notification.message}}
-            </h4> 
+              {% if notification.type_|string() == '3' %}
+                <b>reservation with positive</b>
+              {% endif %}
+                ({{notification.date.strftime('%d/%m/%Y, %H:%M')}}):  {{notification.message}}
           </ul>
           {% endfor %}
         {% endif %}

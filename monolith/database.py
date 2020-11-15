@@ -325,6 +325,7 @@ class Notification(db.Model):
     class TYPE(FormEnum):
         contact_with_positive = 1
         reservation_canceled = 2
+        reservation_with_positive = 3
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 

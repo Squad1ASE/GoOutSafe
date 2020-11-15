@@ -1,5 +1,5 @@
 from flask import Blueprint, redirect, render_template, request, make_response
-from monolith.database import db, Review, Restaurant, Like, WorkingDay, Table, Dish, Seat, Reservation, Quarantine
+from monolith.database import db, Review, Restaurant, Like, WorkingDay, Table, Dish, Seat, Reservation, Quarantine, Notification
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
@@ -12,6 +12,7 @@ from wtforms import Form
 from wtforms.validators import DataRequired, Length, Email, NumberRange
 import ast
 import time
+import datetime
 from time import mktime
 from datetime import timedelta
 from sqlalchemy import or_
@@ -127,7 +128,7 @@ def _restaurants(message=''):
     return render_template("restaurants.html", message=message, restaurants=allrestaurants, base_url="http://127.0.0.1:5000/restaurants")
 
 
-@restaurants.route('/restaurants/<restaurant_id>', methods=['GET','POST'])
+@restaurants.route('/restaurants/<int:restaurant_id>', methods=['GET','POST'])
 @login_required
 def restaurant_sheet(restaurant_id):
 
@@ -136,11 +137,9 @@ def restaurant_sheet(restaurant_id):
 
     restaurantRecord = db.session.query(Restaurant).filter_by(id = int(restaurant_id)).all()[0]
 
-    #tableRecords = db.session.query(Table).filter(Table.restaurant_id == restaurant_id)
-
     cuisinetypes = ""
     for cuisine in restaurantRecord.cuisine_type:
-        cuisinetypes = cuisinetypes+cuisine.name+" "
+        cuisinetypes = cuisinetypes + cuisine.name + " "
 
     # get menu
     restaurant_menu = db.session.query(Dish).filter_by(restaurant_id = restaurant_id)
@@ -237,6 +236,59 @@ def restaurant_sheet(restaurant_id):
 
 
     return render_template("restaurantsheet.html", **data_dict)
+
+
+@restaurants.route('/restaurants/delete/<int:restaurant_id>', methods=['GET'])
+@login_required
+def restaurant_delete(restaurant_id):
+
+    if current_user.role != 'owner':
+        return make_response(render_template('error.html', message="You are not a restaurant owner! Redirecting to home page", redirect_url="/"), 403)
+
+    restaurant = db.session.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+
+    if restaurant is None:
+        return make_response(render_template('error.html', message="Restaurant not found", redirect_url="/"), 404)
+
+    if restaurant.owner_id != current_user.id:
+        return make_response(render_template('error.html', message="You are not the restaurant's owner", redirect_url="/"), 403)
+
+    #da qui ok
+    #TODO: cancellare le reservation e creare le notifiche
+    now = datetime.datetime.now()
+    reservations = db.session.query(Reservation).filter(
+        Reservation.date >= now, 
+        Reservation.restaurant_id == restaurant.id,
+        Reservation.cancelled == False
+        ).all()
+    if len(reservations) > 0:
+        for res in reservations:
+            notification = Notification()
+            notification.email = res.booker.email
+            notification.date = now
+            notification.type_ = Notification.TYPE(2)
+            timestamp = res.date.strftime("%d/%m/%Y, %H:%M")
+            notification.message = 'Your reservation of ' + timestamp + ' at restaurant ' + restaurant.name + ' has been canceled due to the restaurant closing'
+            notification.user_id = res.booker.id
+            db.session.add(notification)
+            res.cancelled = True
+        db.session.commit()
+
+    reservations = db.session.query(Reservation).filter(Reservation.restaurant_id == restaurant.id).all()
+    for res in reservations:
+        db.session.delete(res)
+    likes = db.session.query(Like).filter(Like.restaurant_id == restaurant.id).all()
+    for like in likes:
+        db.session.delete(like)
+    reviews = db.session.query(Review).filter(Review.restaurant_id == restaurant.id).all()
+    for rev in reviews:
+        db.session.delete(rev)
+    
+    # dishes, working days and tables are deleted on cascade
+    db.session.delete(restaurant)
+    db.session.commit()
+
+    return make_response(render_template('error.html', message="Restaurant successfully deleted", redirect_url="/"), 200)
 
 
 @restaurants.route('/restaurants/<int:restaurant_id>/reservation', methods=['GET','POST'])

@@ -1,4 +1,4 @@
-from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Reservation, Quarantine
+from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Reservation, Quarantine, Like, Review, Seat, Notification
 from monolith.classes.tests.conftest import test_app
 from monolith.utilities import create_user_EP, user_login_EP, user_logout_EP, create_restaurant_EP, customers_example, restaurant_example, restaurant_owner_example
 from monolith.utilities import reservation_times_example, reservation_guests_number_example, reservation_guests_email_example, restaurant_reservation_EP, reservation_dates_example
@@ -7,6 +7,7 @@ from monolith.utilities import health_authority_example, mark_patient_as_positiv
 import json
 from sqlalchemy import exc
 import datetime
+from datetime import timedelta
 
 
 def check_restaurants(restaurant_to_check, restaurant):
@@ -980,6 +981,7 @@ def test_restaurant_reservation(test_app):
     ).status_code == 404
     user_logout_EP(test_client)
 
+
 def test_restaurant_overlapping_reservation(test_app):
     app, test_client = test_app
 
@@ -1086,6 +1088,7 @@ def test_restaurant_overlapping_reservation(test_app):
 
     user_logout_EP(test_client)
 
+
 def test_restaurant_reservation_as_positive(test_app):
     app, test_client = test_app
 
@@ -1141,6 +1144,7 @@ def test_restaurant_reservation_as_positive(test_app):
         dict()
     ).status_code == 222
 
+
 def test_restaurant_search(test_app):
     app, test_client = test_app
 
@@ -1178,3 +1182,104 @@ def test_restaurant_search(test_app):
     assert test_client.get('/logout', follow_redirects=True).status_code == 200
     assert user_login_EP(test_client, 'healthauthority@ha.com', 'ha').status_code == 200
     assert test_client.post('/restaurants/search', data=filter, follow_redirects=True).status_code == 403
+
+
+def test_restaurant_delete(test_app):
+    app, test_client = test_app
+
+    # create users for testing
+    temp_user_example_dict = customers_example[0]
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
+ 
+    # create a owner and login
+    temp_owner_example_dict = restaurant_owner_example[0]
+    assert create_user_EP(test_client, **temp_owner_example_dict).status_code == 200
+    temp_owner_example_dict = restaurant_owner_example[1]
+    assert create_user_EP(test_client, **temp_owner_example_dict).status_code == 200
+    assert user_login_EP(test_client, temp_owner_example_dict['email'], temp_owner_example_dict['password']).status_code == 200
+    
+    # create a restaurant
+    temp_restaurant_example = restaurant_example[0]
+    assert create_restaurant_EP(test_client, temp_restaurant_example).status_code == 200
+
+    restaurant = None
+    with app.app_context():
+        restaurant = db.session.query(Restaurant).filter(Restaurant.name == temp_restaurant_example['name']).first()
+    assert restaurant is not None 
+
+    # make a reservation
+    user_logout_EP(test_client)
+    assert user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password']).status_code == 200
+
+    date = datetime.datetime.now() + timedelta(days=2)
+    timestamp = date.strftime("%d/%m/%Y")
+    assert restaurant_reservation_EP(test_client, 
+                                     restaurant.id, 
+                                     timestamp,
+                                     '20:00', 
+                                     '2').status_code == 200
+
+    reservation_date_str = timestamp + ' 20:00'
+    assert restaurant_reservation_POST_EP(
+        test_client,
+        str(restaurant.id),
+        '1',
+        reservation_date_str,
+        '2',
+        { 'guest-0-email':'notified01@ex.com'}
+    ).status_code == 666
+
+    # a fake like and review to test the cancellation of them too when the restaurant is canceled
+    with app.app_context():
+        new_review = Review()
+        new_review.marked = False
+        new_review.comment = 'Good quality restaurant'
+        new_review.rating = 3
+        new_review.date = datetime.date.today()
+        new_review.restaurant_id = restaurant.id
+        new_review.reviewer_id = 1
+        db.session.add(new_review)
+
+        new_like = Like()
+        new_like.marked = False
+        new_like.restaurant_id = restaurant.id
+        new_like.liker_id = 1
+        db.session.add(new_like)
+
+        db.session.commit() 
+        assert len(db.session.query(Like).all()) == 1
+        assert len(db.session.query(Review).all()) == 1
+
+    # try to delete the restaurant of an other owner 
+    assert test_client.get('/restaurants/delete/' + str(restaurant.id), follow_redirects=True).status_code == 403
+    user_logout_EP(test_client)
+
+    # try to delete the restaurant of an other owner 
+    temp_owner_example_dict = restaurant_owner_example[0]
+    assert user_login_EP(test_client, temp_owner_example_dict['email'], temp_owner_example_dict['password']).status_code == 200
+    assert test_client.get('/restaurants/delete/' + str(restaurant.id), follow_redirects=True).status_code == 403
+    user_logout_EP(test_client)
+
+    # try to delete a restaurant not present
+    temp_owner_example_dict = restaurant_owner_example[1]
+    assert user_login_EP(test_client, temp_owner_example_dict['email'], temp_owner_example_dict['password']).status_code == 200
+    assert test_client.get('/restaurants/delete/6', follow_redirects=True).status_code == 404
+
+    # delete ok
+    assert test_client.get('/restaurants/delete/' + str(restaurant.id), follow_redirects=True).status_code == 200
+
+    # test cascade deleting
+    with app.app_context():
+        assert len(db.session.query(Restaurant).all()) == 0
+        assert len(db.session.query(Dish).all()) == 0
+        assert len(db.session.query(Table).all()) == 0
+        assert len(db.session.query(WorkingDay).all()) == 0
+
+        assert len(db.session.query(Like).all()) == 0
+        assert len(db.session.query(Review).all()) == 0
+        assert len(db.session.query(Reservation).all()) == 0
+        assert len(db.session.query(Seat).all()) == 0
+
+        # test notifications (that relating to the cancellation of the reservation for the booker)
+        notifications = db.session.query(Notification).all()
+        assert len(notifications) == 1

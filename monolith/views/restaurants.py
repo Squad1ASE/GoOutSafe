@@ -291,7 +291,7 @@ def reservation(restaurant_id):
                     seat = Seat()
                     seat.reservation_id = reservation.id
                     seat.guests_email = emailField['email']
-                    seat.confirmed = True
+                    seat.confirmed = False
 
                     db.session.add(seat)
 
@@ -299,7 +299,7 @@ def reservation(restaurant_id):
                 seat = Seat()
                 seat.reservation_id = reservation.id
                 seat.guests_email = current_user.email
-                seat.confirmed = True
+                seat.confirmed = False
 
                 db.session.add(seat)
 
@@ -578,7 +578,7 @@ def reservation_list():
             reservation_records = db.session.query(Reservation).filter(
                 Reservation.restaurant_id == restaurant.id, 
                 Reservation.cancelled == False,
-                Reservation.date >= datetime.datetime.now()
+                Reservation.date >= datetime.datetime.now() - timedelta(hours=3)
             ).all()
 
             for reservation in reservation_records:
@@ -615,6 +615,12 @@ def confirm_participants(restaurant_id, reservation_id):
     if (current_user.id != restaurant.owner_id):
         return make_response(render_template('error.html', message="You are not the owner of this restaurant! Redirecting to home page", redirect_url="/"), 403)
 
+    # check if the reservation is in the past or in the future
+
+    reservation = db.session.query(Reservation).filter_by(id=reservation_id).first()
+    if (reservation.date <= datetime.datetime.now() - timedelta(hours=3) or reservation.date >= datetime.datetime.now()):
+        return make_response(render_template('error.html', message="You can't confirm participants for this reservation!", redirect_url="/restaurants/reservation_list"), 403)
+
     # get the guests in this reservation
 
     seats = db.session.query(Seat).filter_by(reservation_id=reservation_id).all()
@@ -627,7 +633,7 @@ def confirm_participants(restaurant_id, reservation_id):
 
     guests = []
     confirmed = []
-
+    
     for seat in seats:
         if seat.confirmed == True:
             # in this case the participants are already confirmed by the owner
@@ -641,7 +647,7 @@ def confirm_participants(restaurant_id, reservation_id):
             if key != 'csrf_token':
                 email = request.form[key]
                 confirmed.append(email)
-                seat = db.session.query(Seat).filter_by(guests_email=email).first()
+                seat = db.session.query(Seat).filter_by(guests_email=email).filter_by(reservation_id=reservation_id).first()
                 seat.confirmed = True
                 db.session.commit()
 

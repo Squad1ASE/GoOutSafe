@@ -64,7 +64,8 @@
             {% for restaurant in restaurants: %}
             <li>
             {{restaurant.name}}     
-            <a href="{{base_url}}/{{restaurant.id}}">Edit</a>
+            <a href="{{base_url}}/edit_restaurant_informations/{{restaurant.id}}">Edit</a> 
+            <a href="{{base_url}}/restaurants/delete/{{restaurant.id}}">Delete</a>
             </li>
             {% endfor %}
           </ul>
@@ -86,7 +87,7 @@
               {% if notification.type_ == 2 %}
                 <b>reservation canceled</b>
               {% endif %}
-                  ({{notification.date}}):  {{notification.message}}
+                  ({{notification.date.strftime('%d/%m/%Y, %H:%M')}}):  {{notification.message}}
             </h4> 
           </ul>
           {% endfor %}

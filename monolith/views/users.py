@@ -1,6 +1,6 @@
 from flask import Blueprint, redirect, render_template, request, make_response
-from monolith.database import db, User, Reservation, Restaurant, Seat
-from monolith.database import Quarantine, Notification, Like, Review
+from monolith.database import ( db, User, Reservation, Restaurant, Seat,
+                                Quarantine, Notification, Like, Review)
 from monolith.auth import admin_required
 from flask_wtf import FlaskForm
 import wtforms as f
@@ -89,132 +89,43 @@ def edit_user():
         return render_template('edit_user.html', form=form, email=current_user.email)
 
 
-@users.route('/delete_user', methods=['GET', 'POST', 'DELETE'])
+@users.route('/delete_user', methods=['GET','DELETE'])
 @login_required
 def delete_user():
 
-    # also the admin cannot be deleted, but since the operation must be visible to him
-    # he is not included in this case as error
     if (current_user.role == 'ha'):
-        return make_response(render_template('error.html', message="HA is allowed to unregister itself! Redirecting to home page", redirect_url="/"), 403)
-   
-    user_to_delete = db.session.query(User).filter(User.email == current_user.email).first()
-    if( user_to_delete is None): #user not already registered
-        return make_response(render_template('error.html', message="Unregistered user is not allowed to unregister itself! Redirecting to home page", redirect_url="/"), 403) 
-
-
-    # ---------------------------------------- DELETE FROM QUARANTINE
-    """
-    # check if user is not positive
-    get_user_quarantine = db.session.query(Quarantine).filter(Quarantine.user_id == user_to_delete.id and Quarantine.in_observation == True).first()
-    if get_user_quarantine is not None: # patient is in observation, un-registration will be done after the deadline        
         return make_response(render_template('error.html', 
-            message="You are positive and cannot unregister yourself untill: "+str(get_user_quarantine.end_date)+" Redirecting to home page", redirect_url="/"), 403) 
-    """
-    # check if user is not positive
-    all_user_quarantine = db.session.query(Quarantine).filter(Quarantine.user_id == user_to_delete.id).all()
-    for user_quarantine in all_user_quarantine:        
-        if user_quarantine.in_observation == True: # patient is in observation, un-registration will be done after the deadline        
-            return make_response(render_template('error.html', 
-                message="You are positive and cannot unregister yourself till: "+str(user_quarantine.end_date)+" Redirecting to home page", 
-                redirect_url="/"), 403) 
-        else: # remove patient from Quarantine
-            db.session.delete(user_quarantine)
-            # the commit is after all the cases
+            message="HA not allowed to sign-out!", 
+            redirect_url="/"), 403)
+
+
+    user_to_delete = db.session.query(User).filter(User.email == current_user.email).first()
+    if( user_to_delete is None or user_to_delete.is_active is False): 
+        return make_response(render_template('error.html', 
+            message="User not allowed to sign-out!", 
+            redirect_url="/"), 403) 
+
+    # TODO
+    if user_to_delete.role == 'owner':
+        # delete first the restaurant and then treat it as a customer
+        print('OWNER') 
+
+    else:                
+        # first delete future reservations               
+        rs = db.session.query(Reservation).filter(
+            Reservation.booker_id==user_to_delete.id,
+            Reservation.date>datetime.datetime.today()).all() 
+        for r in rs: 
+            if r is not None:
+                deletereservation(r.id)
     
-    # --------------------------------------------- DELETE FROM NOTIFICATION    
-    all_user_notification = db.session.query(Notification).filter(Notification.user_id == user_to_delete.id).all()
-    for user_notification in all_user_notification:
-        if user_notification is not None:
-            db.session.delete(user_notification)
-            # the commit is after all the cases
-    #------------------------------------------------- DELETE FROM RESERVATION
-
-    all_user_reservation = db.session.query(Reservation).filter(Reservation.booker_id == user_to_delete.id).all()
-    for user_reservation in all_user_reservation:
-        # is similar to the next function delete reservation which deletes also the seat and table linked to it
-        #---------------------------------------------------DELETE FROM SEAT
-        all_user_seat = db.session.query(Seat).filter(Seat.reservation_id == user_reservation.id).all()
-        for user_seat in all_user_seat:
-            
-            # first notify all guests for the removing of seat            
-            for guest_email in user_seat.guests_email: 
-                if(guest_email != user_to_delete.email):
-
-                    user_to_notify = db.session.query(User).filter(User.email == guest_email).first()
-                    if user_to_notify is not None: #notify all guests who are registered                                                
-                        new_dict = dict(
-                            user_id=user_to_nofitfy.id, 
-                            email=guest_email, 
-                            message='The reservation in which you were guest has been cancelled', 
-                            pending=True, 
-                            type_=Notification.TYPE(2),
-                            date=datetime.now()
-                        )
-                        new_notification = Notification(**new_dict)
-                        db.session.add(new_notification)
-                        #db.session.commit() after all the cases
-            
-            # then remove the seat
-            db.session.delete(user_seat)     
-            # commit follows after all cases   
-        #---------------------------------------------------DELETE FROM TABLE
-        # how is the removing of reservation(FK) - Table?
-        # (how does the table know that is again available for another reservation?)
-        #---------------------------------------------------DELETE FROM RESTAURANT
-        # how is the removing of reservation(FK) - Restaurant?
-        # (how does the restaurant know that the reservation is not more available?)
-
-        db.session.delete(user_reservation) 
-        #it's commit is after all
-    #------------------------------------------------- DELETE FROM LIKE
-    all_user_like = db.session.query(Like).filter(Like.liker_id == user_to_delete.id).all()
-    for user_like in all_user_like:
-        # how does restaurant know that the like is not more available?
-        # adjusting it's like counter is enough?
-        if user_like.marked == True: #the like was counted by Restaurant.likes
-            rest_to_dislike = db.session.query(Restaurant).filter(Restaurant.id == user_like.restaurant_id).first()
-            rest_to_dislike.likes = (rest_to_dislike) - 1
-            db.session.commit(rest_to_dislike) # commit changes about the like counter of the linked restaurant
-        db.session.delete(user_like)
-        #it's commit is after all
-
-    #------------------------------------------------- DELETE FROM REVIEW
-    all_user_review = db.session.query(Review).filter(Review.reviewer_id == user_to_delete.id).all()
-    for user_review in all_user_review:
-        # how does restaurant know that the review is not more available?
-        # adjusting it's review counter and avg rating is enough?
-        if user_review.marked == True:
-            rest_to_disreview = db.session.query(Restaurant).filter(Restaurant.id == user_review.restaurant_id).first()
-            rest_to_disreview.tot_reviews = rest_to_disreview.tot_reviews - 1
-            rest_to_disreview.avg_rating = (rest_to_disreview.avg_rating - user_review.rating)/rest_to_disreview.tot_reviews
-            db.session.commit(rest_to_disreview) # commit changes about the review counter and avg of the linked restaurant
-        db.session.delete(user_review)
-
-    
-    if( user_to_delete.role == 'customer'): # till now were deleted all operations available to a customer
-        print('customer da eliminare')
-        db.session.delete(user_to_delete)
-        db.session.commit()
-
-    else: #owner
-        print('owner da trattare una volta eliminato ristorante')
-
-        #------------------------------------------------- DELETE FROM RESTAURANT
-        # DELETE FIRST RESTAURANT AND THE LINKINGS WITH IT
-        # then its owner becomes a user that can be deleted
+    user_to_delete.is_active = False
+    db.session.commit()
 
 
-
-    
-
-
-    # is shown only to understand that the user was deleted
-    # MUST be changed with home page
-    users = db.session.query(User)
-    return render_template("users.html", users=users)
-
-
+    return make_response(render_template('error.html', 
+        message="Successfully signed out!",
+        redirect_url="/logout"), 200) 
 
 
 @users.route('/users/reservation_list', methods=['GET'])

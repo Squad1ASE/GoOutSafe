@@ -1,6 +1,6 @@
 from flask import Blueprint, redirect, render_template, request, make_response
 from monolith.database import ( db, User, Reservation, Restaurant, Seat,
-                                Quarantine, Notification, Like, Review)
+                                Quarantine, Notification, Like, Review, Table)
 from monolith.auth import admin_required
 from flask_wtf import FlaskForm
 import wtforms as f

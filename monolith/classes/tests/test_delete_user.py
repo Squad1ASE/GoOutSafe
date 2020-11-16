@@ -57,30 +57,7 @@ def test_delete_user(test_app):
 
     # unregister a user without reservations
     with app.app_context(): 
-        # bad access from not active users
         assert create_user_EP(test_client, email='user_customer_example@test.com', password='passw', role='customer').status_code == 200
-
-        user_test = db.session.query(User).filter(User.email == 'user_customer_example@test.com').first() 
-        assert user_test != None
-        user_test.is_active = False
-        db.session.commit()
-        assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 401  # fails the login
-
-        user_test.is_active = True
-        db.session.commit()
-        assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 200 # OK the login
-
-        user_test.is_active = False
-        db.session.commit()
-        assert test_client.delete('/delete_user', follow_redirects=True).status_code == 403  # fails the delete
-        assert user_logout_EP(test_client).status_code == 200
-
-        user_test.is_active = True
-        db.session.commit()    
-
-
-        # good access from active users, from here tests also the celery task part (inside with!!!)
-        # unregister an active user
         assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 200
         assert test_client.delete('/delete_user', follow_redirects=True).status_code == 200
         del_inactive_users()
@@ -107,8 +84,6 @@ def test_delete_user(test_app):
 
     # unregister a user with only future reservations 
     with app.app_context(): 
-
-
         assert create_user_EP(test_client, email='user_customer_example@test.com', password='passw', role='customer').status_code == 200
         assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 200    
     
@@ -145,50 +120,21 @@ def test_delete_user(test_app):
             Reservation.date == reservation_datetime
         ).first() 
         assert reservation_test != None
-        """        
         #check also seat has been added
-        seats = db.session.query(Seat).filter_by(reservation_id=restaurant_test.id).all()
-        assert len(seats) == correct_reservation['guests'] + 1 
-        assert seats[0].guests_email ==  'user_customer2_example@test.com' 
-        assert seats[1].guests_email ==  'user_customer3_example@test.com' 
-        assert seats[2].guests_email ==  'user_customer_example@test.com' 
-        """
+        #seats = db.session.query(Seat).filter_by(reservation_id=restaurant_test.id).all()
+        #assert len(seats) == correct_reservation['guests'] + 1 
+        #assert seats[0].guests_email ==  'user_customer2_example@test.com' 
+        #assert seats[1].guests_email ==  'user_customer3_example@test.com' 
+        #assert seats[2].guests_email ==  'user_customer_example@test.com' 
         
         # unregister the customer, also all its future reservations 
         assert test_client.delete('/delete_user', follow_redirects=True).status_code == 200    
         del_inactive_users()
 
-        # check the changes in db
-        
-        """ 
-        # TODO will be needed after the realization of notifcations in delete_reservation(reservation_id) ??
-        # check notification present for the guests        
-        info = db.session.query(Notification).filter_by(email='user_customer2_example@test.com').first()
-        assert info.email == 'user_customer2_example@test.com'
-        assert info.type_ == Notification.TYPE(2)
-        info = db.session.query(Notification).filter_by(email='user_customer3_example@test.com').first()
-        assert info.email == 'user_customer3_example@test.com'
-        assert info.type_ == Notification.TYPE(2)
-        # notification not present for customer itself
-        info = db.session.query(Notification).filter_by(email='user_customer_example@test.com').first()
-        assert info is None  
-        # notification present for the owner
-        info = db.session.query(Notification).filter_by(email='user_owner_example@test.com').first()
-        assert info.email == 'user_owner_example@test.com'        
-        assert info.message == str(reservation_test.id)
-        assert info.type_ == Notification.TYPE(2)
-        #assert db.session.query(Reservation).filter_by(restaurant_id=restaurant_test.id).first() == None
-        rs = db.session.query(Reservation).filter(
-            Reservation.booker_id==user_test.id, 
-            Reservation.date>datetime.datetime.today(), 
-            Reservation.cancelled==False).all() 
-        for r in rs: 
-            assert r == None
-        """
-
+        # check the changes in db    
         us = db.session.query(User).filter(User.email == 'user_customer_example@test.com').first()        
-        assert us == None 
-        
+
+        assert us == None         
         assert user_logout_EP(test_client).status_code == 200
         assert user_logout_EP(test_client).status_code == 401
         assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 401
@@ -198,7 +144,7 @@ def test_delete_user(test_app):
     with app.app_context(): 
         assert create_user_EP(test_client, email='user_customer_example@test.com', password='passw', role='customer').status_code == 200
         assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 200    
-        user_test = db.session.query(User).filter(User.email == 'user_customer_example@test.com').first()
+        #user_test = db.session.query(User).filter(User.email == 'user_customer_example@test.com').first()
 
         # look for a table in a correct date and time
         startdate = datetime.date.today()
@@ -243,13 +189,12 @@ def test_delete_user(test_app):
         assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 401
 
 
-
     # unregister a user with a computed reservation but are passed exactly 14 days from this last
-    # we don't care for them that happened more than 14 days ago
+    # we don't care for those happened more than 14 days ago
     with app.app_context(): 
         assert create_user_EP(test_client, email='user_customer4_example@test.com', password='passw', role='customer').status_code == 200
         assert user_login_EP(test_client, 'user_customer4_example@test.com', 'passw').status_code == 200    
-        user_test = db.session.query(User).filter(User.email == 'user_customer4_example@test.com').first()
+        #user_test = db.session.query(User).filter(User.email == 'user_customer4_example@test.com').first()
 
         # look for a table in a correct date and time
         startdate = datetime.date.today()
@@ -290,3 +235,59 @@ def test_delete_user(test_app):
         assert user_logout_EP(test_client).status_code == 200
         assert user_logout_EP(test_client).status_code == 401
         assert user_login_EP(test_client, 'user_customer4_example@test.com', 'passw').status_code == 401
+
+
+    # unregister a positive user
+    with app.app_context(): 
+        assert create_user_EP(test_client, email='user_customer4_example@test.com', password='passw', role='customer').status_code == 200
+        #assert user_login_EP(test_client, 'user_customer4_example@test.com', 'passw').status_code == 200
+        #assert user_logout_EP(test_client).status_code == 200
+
+
+        # HA mark as positive the previous customer
+        assert user_login_EP(test_client, 'healthauthority@ha.com', 'ha').status_code == 200
+        assert test_client.get('/patient_informations', follow_redirects=True).status_code == 200
+        assert test_client.post('/patient_informations', data=dict(email="user_customer4_example@test.com"), follow_redirects=True).status_code == 200    
+        assert mark_patient_as_positive(test_client, 'user_customer4_example@test.com').status_code == 555
+        # check quarantine presence in the db        
+        #user_test = db.session.query(User).filter(User.email == 'user_customer4_example@test.com').first()
+        #assert db.session.query(Quarantine).filter(Quarantine.user_id == user_test.id).first() != None
+        assert user_logout_EP(test_client).status_code == 200
+
+        # unregister a positive customer
+        assert user_login_EP(test_client, 'user_customer4_example@test.com', 'passw').status_code == 200
+        assert test_client.delete('/delete_user', follow_redirects=True).status_code == 200    
+        del_inactive_users()        
+
+        #check quarantine and user presence in the db
+        user_test = db.session.query(User).filter(User.email == 'user_customer4_example@test.com').first()
+        assert user_test.is_active == False
+        user_quar = db.session.query(Quarantine).filter(Quarantine.user_id == user_test.id).first()
+        assert user_quar.in_observation == True
+
+        assert user_logout_EP(test_client).status_code == 200
+        assert user_logout_EP(test_client).status_code == 401
+        assert user_login_EP(test_client, 'user_customer4_example@test.com', 'passw').status_code == 401
+
+
+    # unregister a owner user
+    with app.app_context(): 
+        # check the presence of its restaurant and itself in the db
+        owner_test = db.session.query(User).filter(User.email == 'user_owner_example@test.com').first()
+        assert owner_test != None
+        restaurant_test = db.session.query(Restaurant).filter(Restaurant.owner_id == owner_test.id).first()        
+        assert restaurant_test != None
+
+        assert user_login_EP(test_client, 'user_owner_example@test.com', 'passw').status_code == 200
+        assert test_client.delete('/delete_user', follow_redirects=True).status_code == 200    
+        del_inactive_users()        
+
+        # check the absence of its restaurant and itself in the db
+        restaurant_test = db.session.query(Restaurant).filter(Restaurant.owner_id == owner_test.id).first()        
+        assert restaurant_test == None
+        owner_test = db.session.query(User).filter(User.email == 'user_owner_example@test.com').first()
+        assert owner_test == None
+
+        assert user_logout_EP(test_client).status_code == 200
+        assert user_logout_EP(test_client).status_code == 401
+        assert user_login_EP(test_client, 'user_owner_example@test.com', 'passw').status_code == 401

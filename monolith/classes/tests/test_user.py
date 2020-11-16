@@ -329,7 +329,7 @@ def test_users_reservation(test_app):
 
     assert test_client.post('/users/editreservation/1', data=guests_email_dict, follow_redirects=True).status_code == 222
 
-    assert test_client.get('/users/deletereservation/1', follow_redirects=True).status_code == 200
+    #assert test_client.get('/users/deletereservation/1', follow_redirects=True).status_code == 200
 
     assert test_client.get('/users/editreservation/100', follow_redirects=True).status_code == 200
 

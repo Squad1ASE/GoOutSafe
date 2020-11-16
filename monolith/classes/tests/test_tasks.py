@@ -33,13 +33,7 @@ def test_send_email(test_app):
             assert outbox[0].subject == "testing"
 
 
-#-----------------------------------------------------------------------------
-#def test_del_inactive_users(test_app):
-        
-
-
-#-----------------------------------------------------------------------------
-
+# del_inactive_users task is tested on test_delete_user.py 
 
 
 def test_compute_like_count(test_app):

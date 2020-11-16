@@ -157,16 +157,45 @@ def del_inactive_users():
 
     for user_to_delete in users_to_delete:
         pre_date = datetime.date.today() - timedelta(days=14)
-        # after 14 days from its last computed reservation  
-        rs = db.session.query(Reservation).filter(
-            Reservation.booker_id == user_to_delete.id,
-            Reservation.cancelled == False,
-            Reservation.date >= pre_date).all()
         
+        # after 14 days from its last computed reservation  
         inobservation = db.session.query(Quarantine).filter(
             Quarantine.user_id == user_to_delete.id,
             Quarantine.in_observation == True).first()
 
+        if inobservation is None:
+
+            rs = db.session.query(Reservation).filter(
+                Reservation.booker_id == user_to_delete.id,
+                Reservation.cancelled == False,
+                Reservation.date >= pre_date).all()
+
+            if len(rs)==0:
+                user_to_delete.email = 'invalid_email' + str(user_to_delete.id) + '@a.b'
+                user_to_delete.phone = 0
+                user_to_delete.firstname = 'Anonymous'
+                user_to_delete.lastname = 'Anonymous'
+                user_to_delete.password = 'pw'
+                user_to_delete.dateofbirth = None 
+                db.session.commit()
+            else:
+                for r in rs:
+                    # lascio queste stampe
+                    #print(r.date)
+                    #print(pre_date)
+                    #print(r.date==pre_date) 
+                    if r.date.date() == pre_date:
+                        user_to_delete.email = 'invalid_email' + str(user_to_delete.id) + '@a.b'
+                        user_to_delete.phone = 0
+                        user_to_delete.firstname = 'Anonymous'
+                        user_to_delete.lastname = 'Anonymous'
+                        user_to_delete.password = 'pw'
+                        user_to_delete.dateofbirth = None 
+                        db.session.commit()
+
+        # cosi la reservation.date tiene conto dell'orario e fa perdere 
+        # le reservations con esattamente passati i 14 giorni
+        """
         if len(rs) == 0 and inobservation is None:
             user_to_delete.email = 'invalid_email' + str(user_to_delete.id) + '@a.b'
             user_to_delete.phone = 0
@@ -175,7 +204,7 @@ def del_inactive_users():
             user_to_delete.password = 'pw'
             user_to_delete.dateofbirth = None 
             db.session.commit()
-
+        """
 
 @celery.task
 def compute_like_count():

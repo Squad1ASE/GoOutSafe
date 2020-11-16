@@ -1,13 +1,15 @@
-FROM python:3.8-alpine
+FROM ubuntu:20.04
+
+RUN apt-get update -y
+RUN apt-get install -y python3-pip python3-dev build-essential
+RUN apt install -y redis-server
 
 ADD . /app
 WORKDIR /app
 
-RUN pip install -r requirements.txt
+RUN pip3 install -r requirements.txt
+RUN python3 setup.py develop
 
-#ENV FLASK_RUN_HOST 0.0.0.0
-#ENV FLASK_APP monolith/app.py
-#ENV PYTHONPATH "/app"
 
 EXPOSE 5000
 

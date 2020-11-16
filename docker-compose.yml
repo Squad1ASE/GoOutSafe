@@ -1,9 +1,15 @@
-web:
-  build: .
-  dockerfile: Dockerfile
-  environment: 
+version: "3"
+services:
+  flask:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    environment: 
     - FLASK_RUN_HOST=0.0.0.0
     - FLASK_APP=monolith/app.py
-  ports:
-    - "5000:5000"
-  command: flask run
+    - CELERY_BROKER_URL=redis://127.0.0.1:6379
+    - CELERY_BACKEND_URL=redis://127.0.0.1:6379
+    - PYTHONPATH=monolith/
+    command: bash celery_entry.sh
+    ports:
+      - "5000:5000"

@@ -98,19 +98,19 @@ def make_celery(app):
     )
     celery.conf.update(app.config)
     celery.conf.beat_schedule = {'unmark-negative-users': {
-        'task': 'app.unmark_negative_users',
+        'task': 'monolith.app.unmark_negative_users',
         'schedule': 60.0
     }, 'compute-like-count': {
-        'task': 'app.compute_like_count',
+        'task': 'monolith.app.compute_like_count',
         'schedule': 30.0
     }, 'compute-review-count': {
-        'task': 'app.compute_review_count',
+        'task': 'monolith.app.compute_review_count',
         'schedule': 30.0
     }, 'compute-contact-tracing': {
-        'task': 'app.send_notifications',
+        'task': 'monolith.app.send_notifications',
         'schedule': 60.0
     }, 'run-every-1-minute': {
-        'task': 'app.print_hello',
+        'task': 'monolith.app.print_hello',
         'schedule': 3.0
     }
 

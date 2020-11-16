@@ -1,2 +1,4 @@
 #ignore db files
 *.db
+**/*.db
+

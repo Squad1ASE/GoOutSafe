@@ -5,7 +5,9 @@ from flask_login import (current_user, login_user, logout_user,
 from monolith.database import db, User
 from monolith.forms import LoginForm
 
+
 auth = Blueprint('auth', __name__)
+
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
@@ -18,19 +20,19 @@ def login():
             email, password = form.data['email'], form.data['password']
             q = db.session.query(User).filter(User.email == email)
             user = q.first()
-        
-            if user is not None and user.authenticate(password):
+
+            if user is not None and user.authenticate(password) and user.is_active: 
                 login_user(user)
                 return redirect('/')
             else:
                 form.password.errors.append("Invalid credentials.")
-                return make_response(render_template('login.html', form=form), 401)  
+                return make_response(render_template('login.html', form=form), 401)
 
         else:
             return make_response(render_template('login.html', form=form), 400)
 
     return render_template('login.html', form=form)
-    
+
 
 @auth.route("/logout")
 @login_required

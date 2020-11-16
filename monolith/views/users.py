@@ -1,5 +1,6 @@
 from flask import Blueprint, redirect, render_template, request, make_response
-from monolith.database import db, User, Reservation, Restaurant, Seat
+from monolith.database import ( db, User, Reservation, Restaurant, Seat,
+                                Quarantine, Notification, Like, Review)
 from monolith.auth import admin_required
 from flask_wtf import FlaskForm
 import wtforms as f
@@ -86,6 +87,45 @@ def edit_user():
     else:
         form.phone.data = user.phone
         return render_template('edit_user.html', form=form, email=current_user.email)
+
+
+@users.route('/delete_user', methods=['GET','DELETE'])
+@login_required
+def delete_user():
+
+    if (current_user.role == 'ha'):
+        return make_response(render_template('error.html', 
+            message="HA not allowed to sign-out!", 
+            redirect_url="/"), 403)
+
+
+    user_to_delete = db.session.query(User).filter(User.email == current_user.email).first()
+    if( user_to_delete is None or user_to_delete.is_active is False): 
+        return make_response(render_template('error.html', 
+            message="User not allowed to sign-out!", 
+            redirect_url="/"), 403) 
+
+    # TODO
+    if user_to_delete.role == 'owner':
+        # delete first the restaurant and then treat it as a customer
+        print('OWNER') 
+
+    else:                
+        # first delete future reservations               
+        rs = db.session.query(Reservation).filter(
+            Reservation.booker_id==user_to_delete.id,
+            Reservation.date>datetime.datetime.today()).all() 
+        for r in rs: 
+            if r is not None:
+                deletereservation(r.id)
+    
+    user_to_delete.is_active = False
+    db.session.commit()
+
+
+    return make_response(render_template('error.html', 
+        message="Successfully signed out!",
+        redirect_url="/logout"), 200) 
 
 
 @users.route('/users/reservation_list', methods=['GET'])

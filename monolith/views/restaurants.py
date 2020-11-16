@@ -3,7 +3,9 @@ from monolith.database import db, Review, Restaurant, Like, WorkingDay, Table, D
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
-from monolith.forms import DishForm, UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail, ReservationRequest, RestaurantSearch, EditRestaurantForm, ReviewForm
+from monolith.forms import (DishForm, UserForm, RestaurantForm, ReservationPeopleEmail, 
+                            SubReservationPeopleEmail, ReservationRequest, RestaurantSearch, 
+                            EditRestaurantForm, ReviewForm )
 from monolith.views import auth
 import datetime
 from flask_wtf import FlaskForm

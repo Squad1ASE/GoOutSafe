@@ -6,6 +6,19 @@
       {# HA #}
       {% if current_user.role == 'ha' %}
         <h2><a href="/patient_informations">Get patient informations</a></h2>
+        <br>
+
+        {% if possible_infected %}
+        <h2>People who have been in contact with a positive in the past 14 days: </h2>
+          <ul>
+            {% for pi in possible_infected: %}
+            <li>
+                {{pi.date.strftime('%d/%m/%Y')}}  {{pi.email}}  {{pi.phone}}  {{pi.firstname}}  {{pi.lastname}}     
+            </li>
+            {% endfor %}
+          </ul>
+        <br> 
+        {% endif %}
       {% endif %}
 
 
@@ -34,6 +47,9 @@
         <a href="/restaurants/search">Search restaurants!</a>
         <br>
         <br>
+        <a href="/users/reservation_list">Reservations list</a>
+        <br>
+        <br>
         <a href="/delete_user">Unregister!</a>
         <br>
         <br>
@@ -46,12 +62,15 @@
         
         <h2><a href='/create_restaurant'>Insert a new restaurant</a></h2>
         <br>
+        <a href="/restaurants/reservation_list">Reservations list</a>
+        <br>
         <h2>Restaurants list: </h2>
           <ul>
             {% for restaurant in restaurants: %}
             <li>
             {{restaurant.name}}     
-            <a href="{{base_url}}/{{restaurant.id}}">Edit</a>
+            <a href="{{base_url}}/edit_restaurant_informations/{{restaurant.id}}">Edit</a> 
+            <a href="{{base_url}}/restaurants/delete/{{restaurant.id}}">Delete</a>
             </li>
             {% endfor %}
           </ul>
@@ -66,15 +85,16 @@
           <h2>Notifications: </h2>
           {% for notification in notifications %}
           <ul>
-            <h4>
-              {% if notification.type_ == 1 %}
+              {% if notification.type_|string() == '1' %}
                 <b>contact with positive</b>
               {% endif %}
-              {% if notification.type_ == 2 %}
+              {% if notification.type_|string() == '2' %}
                 <b>reservation canceled</b>
               {% endif %}
-                  ({{notification.date}}):  {{notification.message}}
-            </h4> 
+              {% if notification.type_|string() == '3' %}
+                <b>reservation with positive</b>
+              {% endif %}
+                ({{notification.date.strftime('%d/%m/%Y, %H:%M')}}):  {{notification.message}}
           </ul>
           {% endfor %}
         {% endif %}

@@ -235,6 +235,21 @@ restaurant_example = [
     }
 ]
 
+restaurant_h24_example = {
+    'name':'Restaurant 1', 'lat':43.7216621, 'lon':10.4083723, 'phone':'111111', 
+    'cuisine_type':[Restaurant.CUISINE_TYPES(1),Restaurant.CUISINE_TYPES(6)], 'prec_measures':'leggeX', 'avg_time_of_stay':15,
+    'tables-0-table_name':'res1red', 'tables-0-capacity':2, 
+    'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro, mozzarella',
+    'dishes-1-dish_name':'pasta agli scampi', 'dishes-1-price':4, 'dishes-1-ingredients':'pasta, scampi',
+    'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('00:00','23:59')",
+    'workingdays-1-day': WorkingDay.WEEK_DAYS(2), 'workingdays-1-work_shifts':"('00:00','23:59')",
+    'workingdays-2-day': WorkingDay.WEEK_DAYS(3), 'workingdays-2-work_shifts':"('00:00','23:59')",
+    'workingdays-3-day': WorkingDay.WEEK_DAYS(4), 'workingdays-3-work_shifts':"('00:00','23:59')",
+    'workingdays-4-day': WorkingDay.WEEK_DAYS(5), 'workingdays-4-work_shifts':"('00:00','23:59')",
+    'workingdays-5-day': WorkingDay.WEEK_DAYS(6), 'workingdays-5-work_shifts':"('00:00','23:59')",
+    'workingdays-6-day': WorkingDay.WEEK_DAYS(7), 'workingdays-6-work_shifts':"('00:00','23:59')"
+}
+
 reservation_dates_example = [
     '09/11/2020',
     '10/11/2020',
@@ -378,6 +393,9 @@ def restaurant_reservation_POST_EP(test_client, restaurant_id, table_id_reservat
 
 def create_review_EP(test_client, data_dict, rest_id):
     return test_client.post('/restaurants/reviews/'+str(rest_id), data=data_dict, follow_redirects=True)
+
+def confirm_participants_EP(test_client, restaurant_id, reservation_id, data_dict):
+    return test_client.post('/restaurants/' + str(restaurant_id) + '/reservation/' + str(reservation_id), data=data_dict, follow_redirects=True)
 
 
 # --- UTILITIES HEALTHAUTHORITY ---

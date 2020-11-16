@@ -1,4 +1,4 @@
-from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Reservation, Quarantine
+from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Reservation, Quarantine, Like, Review, Seat, Notification
 from monolith.classes.tests.conftest import test_app
 from monolith.utilities import (create_user_EP, user_login_EP, user_logout_EP, 
                                 create_restaurant_EP, customers_example, restaurant_example, restaurant_owner_example,
@@ -10,6 +10,7 @@ from monolith.utilities import (create_user_EP, user_login_EP, user_logout_EP,
 import json
 from sqlalchemy import exc
 import datetime
+from datetime import timedelta
 
 
 def check_restaurants(restaurant_to_check, restaurant):
@@ -983,6 +984,7 @@ def test_restaurant_reservation(test_app):
     ).status_code == 404
     user_logout_EP(test_client)
 
+
 def test_restaurant_overlapping_reservation(test_app):
     app, test_client = test_app
 
@@ -1089,6 +1091,7 @@ def test_restaurant_overlapping_reservation(test_app):
 
     user_logout_EP(test_client)
 
+
 def test_restaurant_reservation_as_positive(test_app):
     app, test_client = test_app
 
@@ -1144,6 +1147,7 @@ def test_restaurant_reservation_as_positive(test_app):
         dict()
     ).status_code == 222
 
+
 def test_restaurant_search(test_app):
     app, test_client = test_app
 
@@ -1181,3 +1185,223 @@ def test_restaurant_search(test_app):
     assert test_client.get('/logout', follow_redirects=True).status_code == 200
     assert user_login_EP(test_client, 'healthauthority@ha.com', 'ha').status_code == 200
     assert test_client.post('/restaurants/search', data=filter, follow_redirects=True).status_code == 403
+
+def test_restaurant_participants_confirmation(test_app):
+    app, test_client = test_app
+
+    # create customers
+    for user in customers_example:
+        create_user_EP(test_client,**user)
+
+    # create restaurant owners
+    for ro in restaurant_owner_example:
+        create_user_EP(test_client,**ro)
+
+    # create a restaurant open every day at any time
+    assert user_login_EP(test_client, restaurant_owner_example[0]['email'], restaurant_owner_example[0]['password']).status_code == 200
+    assert create_restaurant_EP(test_client, restaurant_h24_example).status_code == 200
+    assert user_logout_EP(test_client).status_code == 200
+
+    with app.app_context():
+        #get a user, the owner
+        user = db.session.query(User).filter_by(email=restaurant_owner_example[0]['email']).first()
+        # get his restaurant
+        restaurant = db.session.query(Restaurant).filter_by(owner_id = user.id).first()
+
+
+    # login with a customer (200)
+    assert user_login_EP(test_client, customers_example[2]['email'], customers_example[2]['password']).status_code == 200
+
+    # create a reservation for now
+    assert restaurant_reservation_EP(test_client, 
+                                        restaurant.id, 
+                                        #str(datetime.date.today().day),
+                                        datetime.datetime.today().strftime("%d/%m/%Y"),
+                                        datetime.datetime.today().strftime("%H:%M"),
+                                        #(str(datetime.datetime.now().hour) + ':' + str(datetime.datetime.now().minute)), 
+                                        2).status_code == 200
+
+    guests_email_dict = dict()
+    for i in range(1):
+        key = 'guest-'+str(i)+'-email'
+        #guests_email_dict[key] = 'mail' + str(i) + '@mail.com'
+        guests_email_dict[key] = reservation_guests_email_example[i]
+
+    #reservation_date_str = str(datetime.date.today()) + ' ' +  str(datetime.datetime.now().hour) + ':' + str(datetime.datetime.now().minute)#'10/10/2030' + " " + reservation_times_example[14]
+    reservation_date_str = datetime.datetime.today().strftime("%d/%m/%Y %H:%M")
+    assert restaurant_reservation_POST_EP(
+            test_client,
+            str(restaurant.id),
+            '8',
+            reservation_date_str,
+            '2',
+            guests_email_dict
+        ).status_code == 666
+
+    # logout with the customer and login with the owner
+    assert user_logout_EP(test_client).status_code == 200
+    assert user_login_EP(test_client, restaurant_owner_example[0]['email'], restaurant_owner_example[0]['password']).status_code == 200
+
+    # confirm participants (200)
+    confirmation = dict(
+        confirmed0 = reservation_guests_email_example[0]
+    )
+    with app.app_context():
+        customer = db.session.query(User).filter_by(email=customers_example[2]['email']).first()
+        reservation = db.session.query(Reservation).filter_by(restaurant_id=restaurant.id).filter_by(booker_id=customer.id).first()
+
+    assert test_client.get('/restaurants/' + str(restaurant.id) + '/reservation/' + str(reservation.id), follow_redirects=True).status_code == 200
+    assert confirm_participants_EP(test_client, restaurant.id, reservation.id, confirmation).status_code == 200
+
+    # double confirm (403)
+    assert confirm_participants_EP(test_client, restaurant.id, reservation.id, confirmation).status_code == 403
+
+    assert user_logout_EP(test_client).status_code == 200
+    assert user_login_EP(test_client, customers_example[2]['email'], customers_example[2]['password']).status_code == 200
+
+
+    # create a reservation in the future
+    assert restaurant_reservation_EP(test_client, 
+                                        restaurant.id, 
+                                        (datetime.datetime.today() + timedelta(days=1)).strftime("%d/%m/%Y"),
+                                        (datetime.datetime.today() + timedelta(days=1)).strftime("%H:%M"),
+                                        2).status_code == 200
+
+    guests_email_dict = dict()
+    for i in range(1):
+        key = 'guest-'+str(i)+'-email'
+        #guests_email_dict[key] = 'mail' + str(i) + '@mail.com'
+        guests_email_dict[key] = reservation_guests_email_example[i]
+
+    #reservation_date_str = str(datetime.date.today()) + ' ' +  str(datetime.datetime.now().hour) + ':' + str(datetime.datetime.now().minute)#'10/10/2030' + " " + reservation_times_example[14]
+    reservation_date_str = (datetime.datetime.today() + timedelta(days=1)).strftime("%d/%m/%Y %H:%M")
+    assert restaurant_reservation_POST_EP(
+            test_client,
+            str(restaurant.id),
+            '8',
+            reservation_date_str,
+            '2',
+            guests_email_dict
+        ).status_code == 666
+
+    # logout with the customer and login with the owner
+    assert user_logout_EP(test_client).status_code == 200
+    assert user_login_EP(test_client, restaurant_owner_example[0]['email'], restaurant_owner_example[0]['password']).status_code == 200
+
+    # confirm participants for this reservation (403)
+    assert confirm_participants_EP(test_client, restaurant.id, reservation.id, confirmation).status_code == 403
+
+    with app.app_context():
+        insert_ha(db, app)
+
+    # confirm with health_authority (GET) (403)
+    assert user_logout_EP(test_client).status_code == 200
+    assert user_login_EP(test_client, "healthauthority@ha.com", "ha").status_code == 200
+    assert test_client.get('/restaurants/' + str(restaurant.id) + '/reservation/' + str(reservation.id), follow_redirects=True).status_code == 403
+
+    
+    # confirm with other restaurants owner (GET) (403)
+    assert user_logout_EP(test_client).status_code == 200
+    assert user_login_EP(test_client, restaurant_owner_example[1]['email'], restaurant_owner_example[1]['password']).status_code == 200
+    assert test_client.get('/restaurants/' + str(restaurant.id) + '/reservation/' + str(reservation.id), follow_redirects=True).status_code == 403
+
+def test_restaurant_delete(test_app):
+    app, test_client = test_app
+
+    # create users for testing
+    temp_user_example_dict = customers_example[0]
+    assert create_user_EP(test_client, **temp_user_example_dict).status_code == 200
+ 
+    # create a owner and login
+    temp_owner_example_dict = restaurant_owner_example[0]
+    assert create_user_EP(test_client, **temp_owner_example_dict).status_code == 200
+    temp_owner_example_dict = restaurant_owner_example[1]
+    assert create_user_EP(test_client, **temp_owner_example_dict).status_code == 200
+    assert user_login_EP(test_client, temp_owner_example_dict['email'], temp_owner_example_dict['password']).status_code == 200
+    
+    # create a restaurant
+    temp_restaurant_example = restaurant_example[0]
+    assert create_restaurant_EP(test_client, temp_restaurant_example).status_code == 200
+
+    restaurant = None
+    with app.app_context():
+        restaurant = db.session.query(Restaurant).filter(Restaurant.name == temp_restaurant_example['name']).first()
+    assert restaurant is not None 
+
+    # make a reservation
+    user_logout_EP(test_client)
+    assert user_login_EP(test_client, temp_user_example_dict['email'], temp_user_example_dict['password']).status_code == 200
+
+    date = datetime.datetime.now() + timedelta(days=2)
+    timestamp = date.strftime("%d/%m/%Y")
+    assert restaurant_reservation_EP(test_client, 
+                                     restaurant.id, 
+                                     timestamp,
+                                     '20:00', 
+                                     '2').status_code == 200
+
+    reservation_date_str = timestamp + ' 20:00'
+    assert restaurant_reservation_POST_EP(
+        test_client,
+        str(restaurant.id),
+        '1',
+        reservation_date_str,
+        '2',
+        { 'guest-0-email':'notified01@ex.com'}
+    ).status_code == 666
+
+    # a fake like and review to test the cancellation of them too when the restaurant is canceled
+    with app.app_context():
+        new_review = Review()
+        new_review.marked = False
+        new_review.comment = 'Good quality restaurant'
+        new_review.rating = 3
+        new_review.date = datetime.date.today()
+        new_review.restaurant_id = restaurant.id
+        new_review.reviewer_id = 1
+        db.session.add(new_review)
+
+        new_like = Like()
+        new_like.marked = False
+        new_like.restaurant_id = restaurant.id
+        new_like.liker_id = 1
+        db.session.add(new_like)
+
+        db.session.commit() 
+        assert len(db.session.query(Like).all()) == 1
+        assert len(db.session.query(Review).all()) == 1
+
+    # try to delete the restaurant of an other owner 
+    assert test_client.get('/restaurants/delete/' + str(restaurant.id), follow_redirects=True).status_code == 403
+    user_logout_EP(test_client)
+
+    # try to delete the restaurant of an other owner 
+    temp_owner_example_dict = restaurant_owner_example[0]
+    assert user_login_EP(test_client, temp_owner_example_dict['email'], temp_owner_example_dict['password']).status_code == 200
+    assert test_client.get('/restaurants/delete/' + str(restaurant.id), follow_redirects=True).status_code == 403
+    user_logout_EP(test_client)
+
+    # try to delete a restaurant not present
+    temp_owner_example_dict = restaurant_owner_example[1]
+    assert user_login_EP(test_client, temp_owner_example_dict['email'], temp_owner_example_dict['password']).status_code == 200
+    assert test_client.get('/restaurants/delete/6', follow_redirects=True).status_code == 404
+
+    # delete ok
+    assert test_client.get('/restaurants/delete/' + str(restaurant.id), follow_redirects=True).status_code == 200
+
+    # test cascade deleting
+    with app.app_context():
+        assert len(db.session.query(Restaurant).all()) == 0
+        assert len(db.session.query(Dish).all()) == 0
+        assert len(db.session.query(Table).all()) == 0
+        assert len(db.session.query(WorkingDay).all()) == 0
+
+        assert len(db.session.query(Like).all()) == 0
+        assert len(db.session.query(Review).all()) == 0
+        assert len(db.session.query(Reservation).all()) == 0
+        assert len(db.session.query(Seat).all()) == 0
+
+        # test notifications (that relating to the cancellation of the reservation for the booker)
+        notifications = db.session.query(Notification).all()
+        assert len(notifications) == 1
+

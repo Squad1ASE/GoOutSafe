@@ -2,6 +2,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.orm import relationship, validates  # is Object map scheme
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.schema import CheckConstraint
+from sqlalchemy.orm import backref
 from enum import Enum
 import time
 
@@ -25,6 +26,9 @@ class FormEnum(Enum):
 
     def __str__(self):
         return str(self.value)
+
+    def __lt__(self, other):
+        return self.value < other.value
 
 
 # the following consist of tables inside the db tables are defined using model
@@ -130,7 +134,7 @@ class Table(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
-    restaurant = relationship('Restaurant', foreign_keys='Table.restaurant_id') 
+    restaurant = relationship('Restaurant', foreign_keys='Table.restaurant_id',  backref=db.backref('tables', cascade="all, delete-orphan")) 
 
     table_name = db.Column(db.Unicode(128), db.CheckConstraint('length(table_name) > 0'), nullable=False)   
     capacity = db.Column(db.Integer, db.CheckConstraint('capacity>0'), nullable=False)
@@ -167,7 +171,7 @@ class WorkingDay(db.Model):
         sunday = 7
 
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False, primary_key=True)
-    restaurant = relationship('Restaurant', foreign_keys='WorkingDay.restaurant_id')  
+    restaurant = relationship('Restaurant', foreign_keys='WorkingDay.restaurant_id', backref=db.backref('workdays', cascade="all, delete-orphan"))  
 
     day = db.Column(db.PickleType, nullable=False, primary_key=True)
     work_shifts = db.Column(db.PickleType, nullable=False)  
@@ -207,7 +211,7 @@ class WorkingDay(db.Model):
                     raise ValueError("incorrect format for hour")
         return work_shifts
 
-# is like a pretty rating implementation
+
 class Like(db.Model):
     __tablename__ = 'like'
 
@@ -243,11 +247,11 @@ class Seat(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
     reservation_id = db.Column(db.Integer, db.ForeignKey('reservation.id'))
-    reservation = relationship('Reservation', foreign_keys='Seat.reservation_id')
+    reservation = relationship('Reservation', foreign_keys='Seat.reservation_id', backref=db.backref('seats', cascade="all, delete-orphan"))
 
     guests_email = db.Column(db.String)  
 
-    confirmed = db.Column(db.Boolean, default=True)
+    confirmed = db.Column(db.Boolean, default=False)
 
 
 class Review(db.Model):
@@ -264,12 +268,13 @@ class Review(db.Model):
     comment = db.Column(db.Unicode(128))
     date = db.Column(db.Date)
 
+
 class Dish(db.Model):
     __tablename__ = 'dishes'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
-    restaurant = relationship('Restaurant', foreign_keys='Dish.restaurant_id')
+    restaurant = relationship('Restaurant', foreign_keys='Dish.restaurant_id', backref=db.backref('dishes', cascade="all, delete-orphan"))
 
     dish_name = db.Column(db.Unicode(128), db.CheckConstraint('length(dish_name) > 0'), nullable=False)
     price = db.Column(db.Float, db.CheckConstraint('price>0'), nullable=False)
@@ -320,6 +325,7 @@ class Notification(db.Model):
     class TYPE(FormEnum):
         contact_with_positive = 1
         reservation_canceled = 2
+        reservation_with_positive = 3
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 

@@ -1,4 +1,4 @@
-from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Notification
+from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Notification, Seat
 from monolith.classes.tests.conftest import test_app
 from monolith.utilities import insert_admin, user_logout_EP, restaurant_reservation_POST_EP, restaurant_reservation_EP, create_restaurant_EP, create_user_EP, user_login_EP, insert_ha, customers_example, restaurant_example, restaurant_owner_example, health_authority_example,  mark_patient_as_positive
 import json
@@ -11,10 +11,12 @@ def test_component_home(test_app):
     
     assert test_client.get('/', follow_redirects=True).status_code == 200
 
+
     # normal user
     assert create_user_EP(test_client).status_code == 200
     assert user_login_EP(test_client).status_code == 200
     assert test_client.get('/', follow_redirects=True).status_code == 200
+
 
     # admin
     assert test_client.get('/logout', follow_redirects=True)
@@ -23,6 +25,7 @@ def test_component_home(test_app):
     assert user_login_EP(test_client, 'admin@admin.com', 'admin').status_code == 200
     assert test_client.get('/', follow_redirects=True).status_code == 200
 
+
     # owner
     assert test_client.get('/logout', follow_redirects=True).status_code == 200
     assert create_user_EP(test_client, email='owner@owner.com', password='owner',role='owner').status_code == 200
@@ -30,14 +33,8 @@ def test_component_home(test_app):
     assert test_client.get('/', follow_redirects=True).status_code == 200
     assert create_restaurant_EP(test_client).status_code == 200
     assert test_client.get('/', follow_redirects=True).status_code == 200
-    '''
-    # no-role
-    assert test_client.get('/logout', follow_redirects=True)
-    assert create_user_EP(test_client, email='nr@nr.com', password='nr',role='norole').status_code == 500
-    assert user_login_EP(test_client, 'nr@nr.com', 'nr').status_code == 200
-    assert test_client.get('/', follow_redirects=True).status_code == 404
-    '''
     
+
     # ha -- to test the whole home I have to make reservations and mark positives
     assert test_client.get('/logout', follow_redirects=True)
     insert_ha(db,app)
@@ -130,6 +127,13 @@ def test_component_home(test_app):
         new_notification.date = datetime.date.today()
         db.session.add(new_notification)
         db.session.commit() 
+
+    # confirm the guests
+    with app.app_context():
+        seats = db.session.query(Seat).all()
+        for s in seats:
+            s.confirmed = True
+        db.session.commit()
 
     # login ha
     user_logout_EP(test_client)

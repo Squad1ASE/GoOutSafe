@@ -2,10 +2,10 @@ from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Res
 from monolith.classes.tests.conftest import test_app
 from monolith.utilities import (create_user_EP, user_login_EP, user_logout_EP, 
                                 create_restaurant_EP, customers_example, restaurant_example, restaurant_owner_example,
-                                reservation_times_example, reservation_guests_number_example, 
+                                reservation_times_example, reservation_guests_number_example, restaurant_h24_example,
                                 reservation_guests_email_example, restaurant_reservation_EP, 
                                 reservation_dates_example, restaurant_reservation_GET_EP, 
-                                restaurant_reservation_POST_EP,
+                                restaurant_reservation_POST_EP, confirm_participants_EP,
                                 health_authority_example, mark_patient_as_positive, insert_ha )
 import json
 from sqlalchemy import exc

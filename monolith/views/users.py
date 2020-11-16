@@ -10,6 +10,7 @@ from monolith.forms import UserForm, EditUserForm, SubReservationPeopleEmail
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
 import datetime
+from monolith.views.restaurants import restaurant_delete
 
 users = Blueprint('users', __name__)
 
@@ -56,6 +57,7 @@ def create_user():
 
     return render_template('create_user.html', form=form)
 
+
 @users.route('/edit_user_informations', methods=['GET', 'POST'])
 @login_required
 def edit_user():
@@ -98,30 +100,31 @@ def delete_user():
             message="HA not allowed to sign-out!", 
             redirect_url="/"), 403)
 
-
-    user_to_delete = db.session.query(User).filter(User.email == current_user.email).first()
-    if( user_to_delete is None or user_to_delete.is_active is False): 
+    user_to_delete = db.session.query(User).filter(User.id == current_user.id).first()
+    '''
+    if (user_to_delete is None or user_to_delete.is_active is False): 
         return make_response(render_template('error.html', 
             message="User not allowed to sign-out!", 
             redirect_url="/"), 403) 
+    '''
 
     # TODO
     if user_to_delete.role == 'owner':
         # delete first the restaurant and then treat it as a customer
+        restaurants = db.session.query(Restaurant).filter(Restaurant.owner_id == user_to_delete.id).all()
+        for res in restaurants:
+            restaurant_delete(res.id)
         print('OWNER') 
-
     else:                
         # first delete future reservations               
         rs = db.session.query(Reservation).filter(
-            Reservation.booker_id==user_to_delete.id,
-            Reservation.date>datetime.datetime.today()).all() 
+            Reservation.booker_id == user_to_delete.id,
+            Reservation.date >= datetime.datetime.now()).all() 
         for r in rs: 
-            if r is not None:
-                deletereservation(r.id)
+            deletereservation(r.id)
     
     user_to_delete.is_active = False
     db.session.commit()
-
 
     return make_response(render_template('error.html', 
         message="Successfully signed out!",
@@ -175,6 +178,7 @@ def deletereservation(reservation_id):
         db.session.commit()
 
     return reservation_list()
+
 
 @users.route('/users/editreservation/<reservation_id>', methods=['GET','POST'])
 @login_required

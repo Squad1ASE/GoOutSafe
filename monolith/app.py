@@ -10,7 +10,7 @@ from monolith.utilities import ( insert_ha, create_user_EP, user_login_EP,
                                 restaurant_example, admin_example, health_authority_example, 
                                 restaurant_owner_example )
 import datetime
-from datetime import timedelta
+from datetime import timedelta, date
 
 import time
 from celery import Celery
@@ -138,6 +138,7 @@ celery = make_celery(app)
 def print_hello():
     print('Hello from Celery!')
 
+
 @celery.task
 def unmark_negative_users():
     inobservation = db.session.query(Quarantine).filter_by(in_observation=True).all()
@@ -147,66 +148,33 @@ def unmark_negative_users():
             db.session.commit()
 
 
-# to test --------------------------
 @celery.task
 def del_inactive_users():
 
     users_to_delete = db.session.query(User).filter(
-        User.is_active==False,
-        User.firstname!='Anonymous').all()
+        User.is_active == False,
+        User.firstname != 'Anonymous').all()
+
     for user_to_delete in users_to_delete:
-        if user_to_delete is not None:
-            
-            # after 14 days from its last computed reservation  
-            rs = db.session.query(Reservation).filter(
-                Reservation.booker_id==user_to_delete.id,
-                Reservation.cancelled == False ).all()
+        pre_date = datetime.date.today() - timedelta(days=14)
+        # after 14 days from its last computed reservation  
+        rs = db.session.query(Reservation).filter(
+            Reservation.booker_id == user_to_delete.id,
+            Reservation.cancelled == False,
+            Reservation.date >= pre_date).all()
+        
+        inobservation = db.session.query(Quarantine).filter(
+            Quarantine.user_id == user_to_delete.id,
+            Quarantine.in_observation == True).first()
 
-            most_recent_reservation = Reservation()
-            most_recent_reservation.date = '1900-01-01 00:00:00'
-            for r in rs:    
-                #if r is None: # no reservations
-                #print('OLA')
-                str_date_to_cmp = str(r.date.strftime("%Y-%m-%d %H:%M:%S") )
-                if (r is not None) and (str_date_to_cmp > most_recent_reservation.date ):
-                    #print('CIAO')
-                    #print(r.date)
-                    most_recent_reservation = r
-
-            #startdate = datetime.datetime.strptime(most_recent_reservation.date, "%d/%m/%Y")
-
-            s = str(most_recent_reservation.date )
-            startdate = datetime.datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
-            enddate = startdate + datetime.timedelta(days=14)
-
-            if (most_recent_reservation.date == '1900-01-01 00:00:00' or 
-                    enddate.date() == datetime.date.today()):          
-                #print('ARRIVOOOOOOOOOOOOOOO')
-                #print(user_to_delete)
-                #print(most_recent_reservation.date)
-                #print('ARRIVOOOOOOOOOOOOOOO')
-
-                time.sleep(10) # needed if I have more than one reservations
-                #user_to_delete.email = 'invalid_email'+str(user_to_delete.id)+'@a.b' it's not unique
-                user_to_delete.email = 'invalid_email'+str(datetime.datetime.now().strftime("%H:%M:%S"))+'@a.b'
-
-                #print(user_to_delete.email)
-                #print('ARRIVOOOOOOOOOOOOOOO')
-                user_to_delete.phone = 0
-                user_to_delete.firstname = 'Anonymous'
-                user_to_delete.lastname = 'Anonymous'
-                user_to_delete.password = 'pw'
-                user_to_delete.dateofbirth = None 
-                db.session.commit()
-                #return 200
-       
-
-
-
-# to test --------------------------
-
-
-
+        if len(rs) == 0 and inobservation is None:
+            user_to_delete.email = 'invalid_email' + str(user_to_delete.id) + '@a.b'
+            user_to_delete.phone = 0
+            user_to_delete.firstname = 'Anonymous'
+            user_to_delete.lastname = 'Anonymous'
+            user_to_delete.password = 'pw'
+            user_to_delete.dateofbirth = None 
+            db.session.commit()
 
 
 @celery.task
@@ -217,8 +185,6 @@ def compute_like_count():
         restaurant.likes += 1
         like.marked = True
         db.session.commit()
-
-
 
 
 @celery.task
@@ -276,11 +242,8 @@ def send_email(subject, body, recv):
         print('impossibile spedire mail a: ' + str(recv) + str(ex))
 
 
-
-
 def get_mail_object():
     global mail
     if mail is None:
         mail = Mail(app)
     return mail
-

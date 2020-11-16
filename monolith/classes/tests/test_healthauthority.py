@@ -1,4 +1,4 @@
-from monolith.database import db, User, Quarantine, Restaurant, Notification
+from monolith.database import db, User, Quarantine, Restaurant, Notification, Reservation, Seat
 from monolith.classes.tests.conftest import test_app
 from monolith.utilities import user_logout_EP, restaurant_reservation_POST_EP, restaurant_reservation_EP, create_restaurant_EP, create_user_EP, user_login_EP, insert_ha, customers_example, restaurant_example, restaurant_owner_example, health_authority_example,  mark_patient_as_positive
 import datetime
@@ -164,6 +164,14 @@ def test_contact_tracing_health_authority(test_app):
         { 'guest-0-email':'notified01@ex.com'}
     ).status_code == 666
 
+    # confirm the guests
+    with app.app_context():
+        seats = db.session.query(Seat).all()
+        for s in seats:
+            s.confirmed = True
+        db.session.commit()
+
+
     # make reservation 2
     date = datetime.datetime.now() + timedelta(days=2)
     timestamp = date.strftime("%d/%m/%Y")
@@ -194,4 +202,6 @@ def test_contact_tracing_health_authority(test_app):
     # test notification
     with app.app_context():
         notifications = db.session.query(Notification).all()
+        for n in notifications:
+            print(n.message)
         assert len(notifications) == 3

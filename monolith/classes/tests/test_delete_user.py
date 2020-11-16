@@ -1,5 +1,3 @@
-# from monolith.database import Table, Dish, 
-
 from monolith.database import (db, User, Quarantine, Notification,
                                 Restaurant, WorkingDay,
                                 Reservation, Seat, 
@@ -14,11 +12,7 @@ from monolith.app import del_inactive_users
 import json
 from sqlalchemy import exc
 import datetime
-
-#import unittest
-from monolith.app import del_inactive_users 
-#from datetime import datetime, timedelta
-#import datetime as dt
+from monolith.app import del_inactive_users
 
 
 
@@ -97,9 +91,6 @@ def test_delete_user(test_app):
         assert user_logout_EP(test_client).status_code == 401
         assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 401
 
-
- 
- 
  
     # register a owner
     assert create_user_EP(test_client, email='user_owner_example@test.com', password='passw', role='owner').status_code == 200
@@ -112,8 +103,6 @@ def test_delete_user(test_app):
     # register two guests
     assert create_user_EP(test_client, email='user_customer2_example@test.com', password='passw', role='customer').status_code == 200
     assert create_user_EP(test_client, email='user_customer3_example@test.com', password='passw', role='customer').status_code == 200
-
-
 
 
     # unregister a user with only future reservations 
@@ -301,179 +290,3 @@ def test_delete_user(test_app):
         assert user_logout_EP(test_client).status_code == 200
         assert user_logout_EP(test_client).status_code == 401
         assert user_login_EP(test_client, 'user_customer4_example@test.com', 'passw').status_code == 401
-
-
-
-
-# TODO check if the followings are uselful
-# ---------------------------------------------------------------------------------------- unregister a positive user
-
-"""
-
-    # register again a customer
-    assert create_user_EP(test_client, email='user_customer_example@test.com', password='passw', role='customer').status_code == 200
-    assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 200
-    assert user_logout_EP(test_client).status_code == 200
-    # HA mark as positive the previous customer
-    assert user_login_EP(test_client, 'healthauthority@ha.com', 'ha').status_code == 200
-    assert test_client.get('/patient_informations', follow_redirects=True).status_code == 200
-    assert test_client.post('/patient_informations', data=dict(email="user_customer_example@test.com"), follow_redirects=True).status_code == 200    
-    assert mark_patient_as_positive(test_client, 'user_customer_example@test.com').status_code == 555
-    with app.app_context(): # check quarantine presence in the db        
-        user_test = db.session.query(User).filter(User.email == 'user_customer_example@test.com').first()
-        assert db.session.query(Quarantine).filter(Quarantine.user_id == user_test.id).first() != None
-    assert user_logout_EP(test_client).status_code == 200
-    # unregister a positive customer, gives a failure    
-    assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 200
-    assert test_client.delete('/delete_user', follow_redirects=True).status_code == 403
-    assert user_logout_EP(test_client).status_code == 200
-    # mark as negative the previous customer
-    with app.app_context(): # check quarantine presence in the db        
-        user_test = db.session.query(User).filter(User.email == 'user_customer_example@test.com').first()
-        quarantine_test = db.session.query(Quarantine).filter(Quarantine.user_id == user_test.id).first() 
-        assert quarantine_test is not None
-        quarantine_test.in_observation = False        
-        db.session.commit()
-    # unregister the negatve customer, also from Quarantine
-    assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 200
-    assert test_client.delete('/delete_user', follow_redirects=True).status_code == 200
-    with app.app_context(): # check quarantine absence in the db, that is gained because there is the user absence too        
-        assert db.session.query(User).filter(User.email == 'user_customer_example@test.com').first() == None
-    assert user_logout_EP(test_client).status_code == 401
-    assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 401
-
-    # ----------------------------------------------------------------------------------------------------- DELETE FROM NOTIFICATION
-    # register again a customer
-    assert create_user_EP(test_client, email='user_customer_example@test.com', password='passw', role='customer').status_code == 200
-    assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 200
-    assert user_logout_EP(test_client).status_code == 200
-    with app.app_context(): # check notification presence in the db
-        user_test = db.session.query(User).filter(User.email == 'user_customer_example@test.com').first()
-        notification_test = Notification()
-        notification_test.user_id = user_test.id
-        notification_test.email = user_test.email 
-        notification_test.message = 'hello'
-        notification_test.pending = True
-        notification_test.type_ = Notification.TYPE(1)
-        notification_test.date = datetime.date(2020, 10, 5)
-        db.session.add(notification_test)
-        db.session.commit()
-    # unregister the customer, also from Notification
-    assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 200
-    assert test_client.delete('/delete_user', follow_redirects=True).status_code == 200
-    with app.app_context(): # check notification absence in the db, that is gained because there is the user absence too        
-        assert db.session.query(User).filter(User.email == 'user_customer_example@test.com').first() == None
-    assert user_logout_EP(test_client).status_code == 401
-    assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 401 
-       
-
-    #------------------------------------------------------------------------------------------------ DELETE FROM LIKE
-    #the restaurant is the previous
-
-    # register again a customer
-    assert create_user_EP(test_client, email='user_customer_example@test.com', password='passw', role='customer').status_code == 200
-    assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 200
-
-    # register again a reservation on the previous restaurant
-    with app.app_context(): # check all them present in the db
-        user_test = db.session.query(User).filter(User.email == 'user_customer_example@test.com').first()
-        owner_test = db.session.query(User).filter(User.email == 'user_owner_example@test.com').first()
-        restaurant_test = db.session.query(Restaurant).filter(Restaurant.owner_id == owner_test.id).first()
-        
-        # look for a table in a correct date and time
-        assert restaurant_reservation_EP(test_client, 
-                                            restaurant_id='1', #restaurant_test.id, 
-                                            date=correct_reservation['date'], 
-                                            time=correct_reservation['time'], 
-                                            guests=correct_reservation['guests']).status_code == 200
-        # placing a reservation
-        reservation_date_str = correct_reservation['date'] + " " + correct_reservation['time']
-        reservation_datetime = datetime.datetime.strptime(reservation_date_str, "%d/%m/%Y %H:%M")
-        guests_email_dict = dict()
-        for i in range(correct_reservation['guests']):
-            key = 'guest-'+str(i)+'-email'
-            guests_email_dict[key] = correct_email[i]        
-        assert restaurant_reservation_POST_EP(test_client,
-                                            restaurant_id='1',
-                                            table_id_reservation=8,
-                                            date = reservation_date_str,
-                                            guests=correct_reservation['guests'],
-                                            data=guests_email_dict).status_code == 666
-        # checking via db if reservation has been added
-        assert db.session.query(Reservation).filter(
-            Reservation.restaurant_id == '1',
-            Reservation.table_id == 8, 
-            Reservation.date == reservation_datetime
-        ).first() != None
-
-        #assign a like on a previous registration
-        assert test_client.get('/restaurants/like/'+str(restaurant_test.id)).status_code == 200
-        assert db.session.query(Like).filter(Like.liker_id == user_test.id and Like.restaurant_id==restaurant_test.id).first() != None
-
-    # unregister the customer, also from reservation, seat, like
-    assert test_client.delete('/delete_user', follow_redirects=True).status_code == 200    
-    with app.app_context(): # check all them absent in the db, that is gained because there is the user absence too        
-        assert db.session.query(User).filter(User.email == 'user_customer_example@test.com').first() == None
-    assert user_logout_EP(test_client).status_code == 401
-    assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 401
-
-    #------------------------------------------------------------------------------------------- DELETE FROM REVIEW
-    #the restaurant is the previous
-
-    # register again a customer
-    assert create_user_EP(test_client, email='user_customer_example@test.com', password='passw', role='customer').status_code == 200
-    assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 200
-
-    # register again a reservation on the previous restaurant
-    with app.app_context(): # check all them present in the db
-        user_test = db.session.query(User).filter(User.email == 'user_customer_example@test.com').first()
-        owner_test = db.session.query(User).filter(User.email == 'user_owner_example@test.com').first()
-        restaurant_test = db.session.query(Restaurant).filter(Restaurant.owner_id == owner_test.id).first()
-        
-        # look for a table in a correct date and time
-        assert restaurant_reservation_EP(test_client, 
-                                            restaurant_id='1', #restaurant_test.id, 
-                                            date=correct_reservation['date'], 
-                                            time=correct_reservation['time'], 
-                                            guests=correct_reservation['guests']).status_code == 200
-        # placing a reservation
-        reservation_date_str = correct_reservation['date'] + " " + correct_reservation['time']
-        reservation_datetime = datetime.datetime.strptime(reservation_date_str, "%d/%m/%Y %H:%M")
-        guests_email_dict = dict()
-        for i in range(correct_reservation['guests']):
-            key = 'guest-'+str(i)+'-email'
-            guests_email_dict[key] = correct_email[i]        
-        assert restaurant_reservation_POST_EP(test_client,
-                                            restaurant_id='1',
-                                            table_id_reservation=8,
-                                            date = reservation_date_str,
-                                            guests=correct_reservation['guests'],
-                                            data=guests_email_dict).status_code == 666
-        # checking via db if reservation has been added
-        assert db.session.query(Reservation).filter(
-            Reservation.restaurant_id == str(restaurant_test.id),
-            Reservation.table_id == 8, 
-            Reservation.date == reservation_datetime
-        ).first() != None
-
-        #assign a review on a previous registration
-        new_review = Review()
-        new_review.marked = False
-        new_review.comment = 'Good quality restaurant'
-        new_review.rating = 3
-        new_review.date = datetime.date.today()
-        new_review.restaurant_id = restaurant_test.id
-        new_review.reviewer_id = user_test.id
-        db.session.add(new_review)
-        db.session.commit()
-        assert db.session.query(Review).filter(Review.reviewer_id == user_test.id,Review.restaurant_id == restaurant_test.id).first() != None
-
-    # unregister the customer, also from reservation, seat, review
-    assert test_client.delete('/delete_user', follow_redirects=True).status_code == 200    
-    with app.app_context(): # check all them absent in the db, that is gained because there is the user absence too        
-        assert db.session.query(User).filter(User.email == 'user_customer_example@test.com').first() == None
-    assert user_logout_EP(test_client).status_code == 401
-    assert user_login_EP(test_client, 'user_customer_example@test.com', 'passw').status_code == 401
-
-
-    """

@@ -207,11 +207,14 @@ def _do_contact_tracing(positive, start_date):
         user = db.session.query(User).filter(User.email == email).first()
         if user is not None:
             notification.user_id = user.id
+            notification.email = user.email
             # the positive must not be alerted to have come into contact with itself
             if positive.id == user.id:
                 continue
 
-        db.session.add(notification)
+        # check user deleted
+        if 'invalid_email' not in notification.email:
+            db.session.add(notification)
 
 
     for date, email, owner_id in owners_to_be_notified:

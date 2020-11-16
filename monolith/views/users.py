@@ -1,5 +1,5 @@
 from flask import Blueprint, redirect, render_template, request, make_response
-from monolith.database import db, User, Reservation, Restaurant, Seat
+from monolith.database import db, User, Reservation, Restaurant, Seat, Notification, Table
 from monolith.auth import admin_required
 from flask_wtf import FlaskForm
 import wtforms as f
@@ -121,16 +121,34 @@ def deletereservation(reservation_id):
     if (current_user.role == 'ha' or current_user.role == 'owner'):
         return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
 
-    q = Reservation.query.filter_by(id = reservation_id).first()
+    reservation = db.session.query(Reservation).filter(
+        Reservation.id == reservation_id,
+        Reservation.booker_id == current_user.id
+    ).first()
 
-    if q is not None:
+    if reservation is not None:
 
-        seat_query = Seat.query.filter_by(reservation_id = q.id).all()
+        seat_query = Seat.query.filter_by(reservation_id = reservation.id).all()
 
         for seat in seat_query:
-            seat.confirmed = True
+            seat.confirmed = False
 
-        q.cancelled = True
+        reservation.cancelled = True
+
+        table = db.session.query(Table).filter(Table.id == reservation.table_id).first()
+        restaurant = db.session.query(Restaurant).filter(Restaurant.id == reservation.restaurant_id).first()
+        restaurant_owner = db.session.query(User).filter(User.id == restaurant.owner_id).first()
+
+
+        now = datetime.datetime.now()
+        notification = Notification()
+        notification.email = restaurant_owner.email
+        notification.date = now
+        notification.type_ = Notification.TYPE(2)
+        notification.message = 'The reservation of the ' + table.table_name + ' table for the date ' + str(reservation.date) + ' has been canceled'
+        notification.user_id = restaurant_owner.id
+
+        db.session.add(notification)
 
         db.session.commit()
 

@@ -3,7 +3,7 @@ from monolith.database import db, Review, Restaurant, Like, WorkingDay, Table, D
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
-from monolith.forms import DishForm, UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail, ReservationRequest, RestaurantSearch, EditRestaurantForm, ReviewForm
+from monolith.forms import DishForm, UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail, ReservationRequest, RestaurantSearch, EditRestaurantForm, ReviewForm, EditRestaurantForm_testfix
 from monolith.views import auth
 import datetime
 from flask_wtf import FlaskForm
@@ -420,7 +420,7 @@ def restaurant_edit(restaurant_id):
                 ), 404)
 
 
-        form = EditRestaurantForm()
+        form = EditRestaurantForm_testfix()
 
         if request.method == 'POST':
 
@@ -468,8 +468,64 @@ def restaurant_edit(restaurant_id):
                 # invalid form
                 return make_response(render_template('restaurant_edit.html', form=form, base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id), 400)
         else: 
+
+            # will not be empty since from the creation of the restaurant at least one dish was added
+            dishes_to_edit = db.session.query(Dish).filter(Dish.restaurant_id == int(restaurant_id)).all()
+            for idx in range(len(dishes_to_edit)):
+                setattr(EditRestaurantForm_testfix, 'dish'+str(idx+1), f.FormField(DishForm))
+            
+            attr_list = ['phone']            
+            for i in range(len(dishes_to_edit)):
+                attr_list.append('dish'+str(i+1))
+            setattr(EditRestaurantForm_testfix, 'display', attr_list)
+
+            form = EditRestaurantForm_testfix()
+
+            
+            for idx, d in enumerate(dishes_to_edit):
+                form['dish'+str(idx+1)].dish_name.data = d.dish_name
+                form['dish'+str(idx+1)].price.data = d.price
+                form['dish'+str(idx+1)].ingredients.data = d.ingredients
+            
+                #setattr(EditRestaurantForm_testfix, 'dish '+str(idx), f.FormField(dishform))
+                #setattr(EditRestaurantForm_testfix, 'dish'+str(idx), f.FormField(dishform))
+
+            '''
+            
+            for i in range(2):
+                setattr(EditRestaurantForm_testfix, 'prova'+str(i), f.FormField(DishForm))
+
+            
+            setattr(EditRestaurantForm_testfix, 'prova1', f.FormField(DishForm))
+            setattr(EditRestaurantForm_testfix, 'prova2', f.StringField('prova2', validators=[DataRequired()]))
+            
+            setattr(EditRestaurantForm_testfix, 'display', ['phone', 'prova0','prova1'])
+            
+            
+            dishform1 = DishForm
+            dishform1.dish_name.data = "prova1"
+            dishform1.price.data = "prova1"
+            dishform1.ingredients.data = "prova1"
+            dishform2 = DishForm
+            dishform2.dish_name.data = "prova2"
+            dishform2.price.data = "prova2"
+            dishform2.ingredients.data = "prova2"
+
+
+            setattr(EditRestaurantForm_testfix, 'prova1', f.FormField(DishForm))
+            setattr(EditRestaurantForm_testfix, 'prova2', f.FormField(dishform2))
+            setattr(EditRestaurantForm_testfix, 'display', ['prova1','prova2'])
+            
+            form = EditRestaurantForm_testfix()
+            #setattr(form, 'prova1.price.data', '5')
+            #form.prova1.price.data = '5'
+            form['prova1'].price.data = '5'
+            #setattr(form, 'prova1.price.data', '5')
+            #form = EditRestaurantForm_testfix(3)
+            '''
+
             # in the GET we fill all the fields
-            form.phone.data = record.phone
+            #form.phone.data = record.phone
 
             # will not be empty since from the creation of the restaurant at least one table was added            
             #tables_to_edit = db.session.query(Table).filter(Table.restaurant_id == int(restaurant_id))
@@ -483,16 +539,22 @@ def restaurant_edit(restaurant_id):
                 i = i+1
             '''
 
-            # will not be empty since from the creation of the restaurant at least one dish was added
-            dishes_to_edit = db.session.query(Dish).filter(Dish.restaurant_id == int(restaurant_id)).all()
-            i=0
-            for d in dishes_to_edit:
-                form.dishes[i].dish_name.data = d.dish_name
-                form.dishes[i].price.data = d.price
-                form.dishes[i].ingredients.data = d.ingredients
-                i=i+1
+            
+            '''
+            dishform = Dish()
+            dishform.dish_name.data = d.dish_name
+            dishform.price.data = d.price
+            dishform.ingredients.data = d.ingredients
 
-            return render_template('restaurant_edit.html', form=form, base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id)
+            setattr(EditRestaurantForm, )
+                
+            form.dishes[i].dish_name.data = d.dish_name
+            form.dishes[i].price.data = d.price
+            form.dishes[i].ingredients.data = d.ingredients
+            i=i+1
+            '''
+            #return render_template('restaurant_edit.html', form=form, base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id)
+            return render_template('restaurant_edit_fix_test.html', form=form, base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id)
 
 
     # user not logged

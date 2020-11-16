@@ -147,3 +147,13 @@ class EditRestaurantForm(FlaskForm):
     #tables = f.FieldList(f.FormField(TableForm), min_entries=1, max_entries=100)
     dishes = f.FieldList(f.FormField(DishForm), min_entries=1, max_entries=100)
     display = ['phone']
+
+class EditRestaurantForm_testfix(FlaskForm):
+    phone = f.StringField('Phone', validators=[DataRequired()])
+    #tables = f.FieldList(f.FormField(TableForm), min_entries=1, max_entries=100)
+    #dishes = None
+    #def __init__(self): 
+        #print(size)
+        #self.dishes = f.FieldList(f.FormField(DishForm), min_entries=5, max_entries=5)
+    #dishes = f.FieldList(f.FormField(DishForm), min_entries=5, max_entries=5)
+    #display = ['phone','dishes']

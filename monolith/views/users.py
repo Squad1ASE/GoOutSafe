@@ -101,20 +101,12 @@ def delete_user():
             redirect_url="/"), 403)
 
     user_to_delete = db.session.query(User).filter(User.id == current_user.id).first()
-    '''
-    if (user_to_delete is None or user_to_delete.is_active is False): 
-        return make_response(render_template('error.html', 
-            message="User not allowed to sign-out!", 
-            redirect_url="/"), 403) 
-    '''
 
-    # TODO
     if user_to_delete.role == 'owner':
         # delete first the restaurant and then treat it as a customer
         restaurants = db.session.query(Restaurant).filter(Restaurant.owner_id == user_to_delete.id).all()
         for res in restaurants:
             restaurant_delete(res.id)
-        print('OWNER') 
     else:                
         # first delete future reservations               
         rs = db.session.query(Reservation).filter(
@@ -164,20 +156,41 @@ def deletereservation(reservation_id):
     if (current_user.role == 'ha' or current_user.role == 'owner'):
         return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
 
-    q = Reservation.query.filter_by(id = reservation_id).first()
+    reservation = db.session.query(Reservation).filter(
+        Reservation.id == reservation_id,
+        Reservation.booker_id == current_user.id
+    ).first()
 
-    if q is not None:
+    if reservation is not None:
+        now = datetime.datetime.now()
+        if reservation.date < now:
+            return make_response(render_template('error.html', message="You can't delete a past reservation!", redirect_url="/users/reservation_list"), 403)
 
-        seat_query = Seat.query.filter_by(reservation_id = q.id).all()
+        seat_query = Seat.query.filter_by(reservation_id = reservation.id).all()
 
         for seat in seat_query:
-            seat.confirmed = True
+            seat.confirmed = False
 
-        q.cancelled = True
+        reservation.cancelled = True
+
+        table = db.session.query(Table).filter(Table.id == reservation.table_id).first()
+        restaurant = db.session.query(Restaurant).filter(Restaurant.id == reservation.restaurant_id).first()
+        restaurant_owner = db.session.query(User).filter(User.id == restaurant.owner_id).first()
+
+        
+        notification = Notification()
+        notification.email = restaurant_owner.email
+        notification.date = now
+        notification.type_ = Notification.TYPE(2)
+        notification.message = 'The reservation of the ' + table.table_name + ' table for the date ' + str(reservation.date) + ' has been canceled'
+        notification.user_id = restaurant_owner.id
+
+        db.session.add(notification)
 
         db.session.commit()
+        return reservation_list()
 
-    return reservation_list()
+    return make_response(render_template('error.html', message="Reservation not found", redirect_url="/users/reservation_list"), 404)
 
 
 @users.route('/users/editreservation/<reservation_id>', methods=['GET','POST'])

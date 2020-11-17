@@ -200,46 +200,68 @@ def editreservation(reservation_id):
     if (current_user.role == 'ha' or current_user.role == 'owner'):
         return make_response(render_template('error.html', message="You are not a customer! Redirecting to home page", redirect_url="/"), 403)
 
-    q = Reservation.query.filter_by(id = reservation_id).first()
+    q = db.session.query(Reservation).filter(Reservation.id == reservation_id, Reservation.booker_id == current_user.id).first()
     
     if q is not None:
 
-        seat_query = db.session.query(Seat).filter(Seat.reservation_id == q.id).all()
+        seat_query = db.session.query(Seat).filter(Seat.reservation_id == q.id, Seat.guests_email != current_user.email).order_by(Seat.id).all()
+        table = db.session.query(Table).filter(Table.id == q.table_id).first()   
 
-        number_of_guests = len(seat_query) -1
+        guests_email_list = list()
 
-        if(len(seat_query) > 1):
+        for seat in seat_query:
+            guests_email_list.append(seat.guests_email)
 
-            guests_email_list = list()
+        class ReservationForm(FlaskForm):
+            pass
 
-            for seat in seat_query:
-                if(seat.guests_email != current_user.email):
-                    guests_email_list.append(seat.guests_email)
+        guests_field_list = []
+        for idx in range(table.capacity-1):
+            setattr(ReservationForm, 'guest'+str(idx+1), f.StringField('guest '+str(idx+1)+ ' email'))
+            guests_field_list.append('guest'+str(idx+1))
 
-            class edit_form(FlaskForm):
-                guest = f.FieldList(f.FormField(SubReservationPeopleEmail), min_entries=number_of_guests, max_entries=number_of_guests)
-                display = ['guest']
+        setattr(ReservationForm, 'display', guests_field_list)
 
-            form = edit_form()
+        form = ReservationForm()
+            
+        if request.method == 'POST':
 
-            if request.method == 'POST':
+            if form.validate_on_submit():
 
-                if form.validate_on_submit():
+                for idx, emailField in enumerate(guests_field_list):                        
+                    # checking if already inserted guests email have been changed
+                    if(idx < len(guests_email_list)):
+                        if(form[emailField].data != guests_email_list[idx]):
+                            if not form[emailField].data:
+                                db.session.delete(seat_query[idx]) 
+                            else:
+                                seat_query[idx].guests_email = form[emailField].data
+                        
+                        db.session.commit()
 
-                    for i, email_field in enumerate(form.guest.data):
+                    # checking if customer added new guests (if seats available)
+                    else:
+                        if form[emailField].data != "":
+                            seat = Seat()
+                            seat.reservation_id = reservation_id
+                            seat.guests_email = form[emailField].data
+                            seat.confirmed = False
+                                
+                            db.session.add(seat)
+                        
+                            db.session.commit()
 
-                        seat_query[i].guests_email = email_field['email']
-                    
-                    db.session.commit()
+                # this isn't an error
+                return make_response(render_template('error.html', message="Guests changed!", redirect_url="/"), 222)
 
-                    # this isn't an error
-                    return make_response(render_template('error.html', message="Guests changed!", redirect_url="/"), 222)
+        if(len(guests_email_list) >= 1):
+            for idx, guestemail in enumerate(guests_email_list):
+                form[guests_field_list[idx]].data = guestemail
 
-
-            return render_template('user_reservation_edit.html', form=form)
+        return render_template('user_reservation_edit.html', form=form)
     
     else:
-        return reservation_list()
+        return make_response(render_template('error.html', message="Reservation not found", redirect_url="/users/reservation_list"), 404)
 
     
     

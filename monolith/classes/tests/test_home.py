@@ -1,6 +1,6 @@
 from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Notification, Seat
 from monolith.classes.tests.conftest import test_app
-from monolith.utilities import insert_admin, user_logout_EP, restaurant_reservation_POST_EP, restaurant_reservation_EP, create_restaurant_EP, create_user_EP, user_login_EP, insert_ha, customers_example, restaurant_example, restaurant_owner_example, health_authority_example,  mark_patient_as_positive
+from monolith.utilities import restaurant_h24_example, insert_admin, user_logout_EP, restaurant_reservation_POST_EP, restaurant_reservation_EP, create_restaurant_EP, create_user_EP, user_login_EP, insert_ha, customers_example, restaurant_example, restaurant_owner_example, health_authority_example,  mark_patient_as_positive
 import json
 from sqlalchemy import exc
 import datetime
@@ -47,7 +47,7 @@ def test_component_home(test_app):
     assert user_login_EP(test_client, temp_owner_example_dict['email'], temp_owner_example_dict['password']).status_code == 200
     
     # create a restaurant
-    temp_restaurant_example = restaurant_example[2]
+    temp_restaurant_example = restaurant_h24_example
     assert create_restaurant_EP(test_client, temp_restaurant_example).status_code == 200
 
     restaurant = None
@@ -75,7 +75,7 @@ def test_component_home(test_app):
         '1',
         reservation_date_str,
         '2',
-        { 'guest-0-email':'notified01@ex.com'}
+        { 'guest1':'notified01@ex.com'}
     ).status_code == 666
 
     # make a reservation 2
@@ -94,7 +94,7 @@ def test_component_home(test_app):
         '1',
         reservation_date_str,
         '3',
-        { 'guest-0-email':'notified01@ex.com', 'guest-1-email':customers_example[0]['email']}
+        { 'guest1':'notified01@ex.com', 'guest2':customers_example[0]['email']}
     ).status_code == 666
 
     # make a reservation 3
@@ -113,7 +113,7 @@ def test_component_home(test_app):
         '1',
         reservation_date_str,
         '3',
-        { 'guest-0-email':'notified01@ex.com', 'guest-1-email':customers_example[0]['email']}
+        { 'guest1':'notified01@ex.com', 'guest2':customers_example[0]['email']}
     ).status_code == 666
 
     # a fake notification with user_id not associated with a real user  

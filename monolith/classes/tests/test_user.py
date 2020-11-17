@@ -300,23 +300,34 @@ def test_users_reservation(test_app):
 
     reservation_date_str_dict = [
         reservation_dates_example[1] + " " + reservation_times_example[0],
-        reservation_dates_example[1] + " " + reservation_times_example[3]
+        reservation_dates_example[7] + " " + reservation_times_example[3]
     ]
 
     guests_email_dict = dict()
     for i in range(reservation_guests_number_example[1]):
-        key = 'guest-'+str(i)+'-email'
+        key = 'guest'+str(i+1)
         guests_email_dict[key] = reservation_guests_email_example[i]
 
     # log as customer 1
     user_login_EP(test_client, customers_example[0]['email'], 
                                 customers_example[0]['password'])
-    # Customer1
+
+    # Customer1 reservation 1 in the past
     assert restaurant_reservation_POST_EP(
         test_client,
         restaurant_id[0],
         1,
         reservation_date_str_dict[0],
+        reservation_guests_number_example[1],
+        guests_email_dict
+    ).status_code == 666
+
+    # Customer1 reservation 2 in the future
+    assert restaurant_reservation_POST_EP(
+        test_client,
+        restaurant_id[0],
+        1,
+        reservation_date_str_dict[1],
         reservation_guests_number_example[1],
         guests_email_dict
     ).status_code == 666
@@ -329,9 +340,14 @@ def test_users_reservation(test_app):
 
     assert test_client.post('/users/editreservation/1', data=guests_email_dict, follow_redirects=True).status_code == 222
 
-    assert test_client.get('/users/deletereservation/1', follow_redirects=True).status_code == 200
+    # failure, there is no possibility to delete a past reservation
+    assert test_client.get('/users/deletereservation/1', follow_redirects=True).status_code == 403
 
-    assert test_client.get('/users/editreservation/100', follow_redirects=True).status_code == 200
+    # failure, the reservation id with this user doesn't exist
+    assert test_client.get('/users/editreservation/100', follow_redirects=True).status_code == 404
+
+    # failure, there is no possibility to delete a past reservation
+    assert test_client.get('/users/deletereservation/2', follow_redirects=True).status_code == 200
 
     insert_ha(db, app)
 

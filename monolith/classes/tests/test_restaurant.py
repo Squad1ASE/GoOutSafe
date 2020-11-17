@@ -923,7 +923,7 @@ def test_restaurant_reservation(test_app):
 
     guests_email_dict = dict()
     for i in range(reservation_guests_number_example[3]):
-        key = 'guest-'+str(i)+'-email'
+        key = 'guest'+str(i+1)
         guests_email_dict[key] = reservation_guests_email_example[i]
         
     assert restaurant_reservation_POST_EP(
@@ -1020,7 +1020,7 @@ def test_restaurant_overlapping_reservation(test_app):
 
     guests_email_dict = dict()
     for i in range(reservation_guests_number_example[1]):
-        key = 'guest-'+str(i)+'-email'
+        key = 'guest'+str(i+1)
         guests_email_dict[key] = reservation_guests_email_example[i]
 
 
@@ -1223,7 +1223,7 @@ def test_restaurant_participants_confirmation(test_app):
 
     guests_email_dict = dict()
     for i in range(1):
-        key = 'guest-'+str(i)+'-email'
+        key = 'guest'+str(i+1)
         #guests_email_dict[key] = 'mail' + str(i) + '@mail.com'
         guests_email_dict[key] = reservation_guests_email_example[i]
 
@@ -1269,7 +1269,7 @@ def test_restaurant_participants_confirmation(test_app):
 
     guests_email_dict = dict()
     for i in range(1):
-        key = 'guest-'+str(i)+'-email'
+        key = 'guest'+str(i+1)
         #guests_email_dict[key] = 'mail' + str(i) + '@mail.com'
         guests_email_dict[key] = reservation_guests_email_example[i]
 
@@ -1347,7 +1347,7 @@ def test_restaurant_delete(test_app):
         '1',
         reservation_date_str,
         '2',
-        { 'guest-0-email':'notified01@ex.com'}
+        { 'guest1':'notified01@ex.com'}
     ).status_code == 666
 
     # a fake like and review to test the cancellation of them too when the restaurant is canceled

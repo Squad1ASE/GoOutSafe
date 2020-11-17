@@ -1,5 +1,4 @@
 from flask import Blueprint, render_template, redirect
-
 from monolith.database import db, Restaurant, Like, Notification, User
 from monolith.auth import current_user
 import datetime
@@ -11,9 +10,10 @@ home = Blueprint('home', __name__)
 @home.route('/')
 def index():
     if current_user is not None and hasattr(current_user, 'id'):
+        
         if current_user.role == 'admin':
             restaurants = db.session.query(Restaurant)
-            return render_template("homepage_info.html", restaurants=restaurants, base_url="http://127.0.0.1:5000/restaurants") 
+            return render_template("homepage_info.html", restaurants=restaurants, base_url="http://127.0.0.1:5000/restaurants")
 
 
         if current_user.role == 'ha':
@@ -53,10 +53,10 @@ def index():
                 possible_infected_sorted = sorted(possible_infected_not_sorted, key=lambda k: k['date']) 
             return render_template("homepage_info.html", possible_infected=possible_infected_sorted) 
 
-
+          
         if current_user.role == 'customer':
             notifications = db.session.query(Notification).filter(Notification.user_id == current_user.id).all()
-            return render_template("homepage_info.html", notifications=notifications) 
+            return render_template("homepage_info.html", notifications=notifications)
 
 
         if current_user.role == 'owner':

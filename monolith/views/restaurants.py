@@ -1,9 +1,11 @@
 from flask import Blueprint, redirect, render_template, request, make_response
-from monolith.database import db, Review, Restaurant, Like, WorkingDay, Table, Dish, Seat, Reservation, Quarantine, Notification
+from monolith.database import db, User, Review, Restaurant, Like, WorkingDay, Table, Dish, Seat, Reservation, Quarantine, Notification
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
-from monolith.forms import DishForm, UserForm, RestaurantForm, ReservationPeopleEmail, SubReservationPeopleEmail, ReservationRequest, RestaurantSearch, EditRestaurantForm, ReviewForm
+from monolith.forms import (DishForm, UserForm, RestaurantForm, ReservationPeopleEmail, 
+                            SubReservationPeopleEmail, ReservationRequest, RestaurantSearch, 
+                            EditRestaurantForm, ReviewForm )
 from monolith.views import auth
 import datetime
 from flask_wtf import FlaskForm
@@ -164,6 +166,7 @@ def restaurant_sheet(restaurant_id):
     if request.method == 'POST':
 
                 if form.validate_on_submit():
+                    tavoli = db.session.query(Table).filter(Table.restaurant_id == restaurant_id).all()
                     # 1 transform datetime from form in week day
                     # 2 search inside working day DB with restaurant ID, check if in the specific day and time the restaurant is open
                     # 3 check the list of available tables, the search starts from reservation (consider avg_stay_time)
@@ -253,8 +256,6 @@ def restaurant_delete(restaurant_id):
     if restaurant.owner_id != current_user.id:
         return make_response(render_template('error.html', message="You are not the restaurant's owner", redirect_url="/"), 403)
 
-    #da qui ok
-    #TODO: cancellare le reservation e creare le notifiche
     now = datetime.datetime.now()
     reservations = db.session.query(Reservation).filter(
         Reservation.date >= now, 
@@ -308,11 +309,18 @@ def reservation(restaurant_id):
     guests = int(request.args.get('guests')) -1
     date = datetime.datetime.strptime(request.args.get('date'), "%d/%m/%Y %H:%M")
 
-    class test(FlaskForm):
-        guest = f.FieldList(f.FormField(SubReservationPeopleEmail), min_entries=guests, max_entries=guests)
-        display = ['guest']
-    
-    form = test()
+        
+    class ReservationForm(FlaskForm):
+        pass
+
+    guests_field_list = []
+    for idx in range(guests):
+        setattr(ReservationForm, 'guest'+str(idx+1), f.StringField('guest '+str(idx+1)+ ' email', validators=[Length(10, 64), Email()]))
+        guests_field_list.append('guest'+str(idx+1))
+
+    setattr(ReservationForm, 'display', guests_field_list)
+
+    form = ReservationForm()
 
     if request.method == 'POST':
 
@@ -339,14 +347,15 @@ def reservation(restaurant_id):
 
                 db.session.add(reservation)
                 db.session.commit()
-                for emailField in form.guest.data:
+                for emailField in guests_field_list:
+                    
                     seat = Seat()
                     seat.reservation_id = reservation.id
-                    seat.guests_email = emailField['email']
+                    seat.guests_email = form[emailField].data
                     seat.confirmed = False
-
+                    
                     db.session.add(seat)
-
+                    
                 # seat of the booker
                 seat = Seat()
                 seat.reservation_id = reservation.id
@@ -354,7 +363,6 @@ def reservation(restaurant_id):
                 seat.confirmed = False
 
                 db.session.add(seat)
-
                 db.session.commit()
 
                 # this isn't an error
@@ -478,32 +486,18 @@ def restaurant_edit(restaurant_id):
 
             if form.validate_on_submit():
 
-                phone_changed = form.data['phone']                
-                #tables_changed = []
-                #tot_capacity_changed = -1
-                dishes_changed = []
-                # check that phone and all tables/dishes fields are correct
-                # the changing of tables changes also the overall capacity
-                #tables_changed, tot_capacity_changed = _check_tables(form.tables.data)
-                #del form.tables
+                phone_changed = form.data['phone']
 
+                dishes_changed = []
                 dishes_changed = _check_dishes(form.dishes.data)
                 del form.dishes
+
                 record.phone = phone_changed
-                #tables_to_edit = db.session.query(Table).filter(Table.restaurant_id == int(restaurant_id))
-                #if tables_to_edit is not None:                    
-                #    for t in tables_to_edit:
-                #        db.session.delete(t)
                 dishes_to_edit = db.session.query(Dish).filter(Dish.restaurant_id == int(restaurant_id))
                 if dishes_to_edit is not None: 
                     for d in dishes_to_edit:
                         db.session.delete(d)
-                '''
-                for l in [tables_changed, dishes_changed]:
-                    for el in l:
-                        el.restaurant_id = int(restaurant_id)
-                        db.session.add(el)                    
-                '''
+
                 for el in dishes_changed:
                     newdish = Dish()
                     newdish.restaurant_id = int(restaurant_id)
@@ -515,7 +509,6 @@ def restaurant_edit(restaurant_id):
                 db.session.commit()
                 return make_response(render_template('error.html', message="You have correctly edited! Redirecting to your restaurants", redirect_url="/"), 200)
 
-
             else:
                 # invalid form
                 return make_response(render_template('restaurant_edit.html', form=form, base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id), 400)
@@ -523,29 +516,17 @@ def restaurant_edit(restaurant_id):
             # in the GET we fill all the fields
             form.phone.data = record.phone
 
-            # will not be empty since from the creation of the restaurant at least one table was added            
-            #tables_to_edit = db.session.query(Table).filter(Table.restaurant_id == int(restaurant_id))
-            '''
-            i=0
-            for t in tables_to_edit:
-                form.tables[i].table_name.data = t.table_name
-                #print(t.table_name)
-                form.tables[i].capacity.data = t.capacity
-                #print(t.capacity)
-                i = i+1
-            '''
-
             # will not be empty since from the creation of the restaurant at least one dish was added
             dishes_to_edit = db.session.query(Dish).filter(Dish.restaurant_id == int(restaurant_id)).all()
-            i=0
-            for d in dishes_to_edit:
-                form.dishes[i].dish_name.data = d.dish_name
-                form.dishes[i].price.data = d.price
-                form.dishes[i].ingredients.data = d.ingredients
-                i=i+1
+            for idx, d in enumerate(dishes_to_edit):
+                if idx > 0:
+                    dish_form = DishForm()
+                    form.dishes.append_entry(dish_form)
+                form.dishes[idx].dish_name.data = d.dish_name
+                form.dishes[idx].price.data = d.price
+                form.dishes[idx].ingredients.data = d.ingredients
 
             return render_template('restaurant_edit.html', form=form, base_url="http://127.0.0.1:5000/edit_restaurant_informations/"+restaurant_id)
-
 
     # user not logged
     return make_response(

@@ -1,14 +1,17 @@
 import os
 from flask import Flask
-from monolith.database import db, User, Restaurant, Table, WorkingDay
-from monolith.database import Reservation, Like, Seat, Review
-from monolith.database import Dish, Quarantine
-from monolith.database import Notification
+from monolith.database import ( db, User, Restaurant, Table, WorkingDay,
+                                Reservation, Like, Seat, Review, 
+                                Dish, Quarantine, Notification )
 from monolith.views import blueprints
 from monolith.auth import login_manager
-from monolith.utilities import insert_ha, create_user_EP, user_login_EP, user_logout_EP, create_restaurant_EP, customers_example
-from monolith.utilities import restaurant_example, admin_example, health_authority_example, restaurant_owner_example 
+from monolith.utilities import ( insert_ha, create_user_EP, user_login_EP, 
+                                user_logout_EP, create_restaurant_EP, customers_example, 
+                                restaurant_example, admin_example, health_authority_example, 
+                                restaurant_owner_example )
 import datetime
+from datetime import timedelta, date
+
 import time
 from celery import Celery
 from flask_mail import Message, Mail
@@ -112,6 +115,9 @@ def make_celery(app):
     }, 'run-every-1-minute': {
         'task': 'app.print_hello',
         'schedule': 3.0
+    }, 'run-every-1-minute': {
+        'task': 'app.del_inactive_users',
+        'schedule': 3.0
     }
 
     }
@@ -132,6 +138,7 @@ celery = make_celery(app)
 def print_hello():
     print('Hello from Celery!')
 
+
 @celery.task
 def unmark_negative_users():
     inobservation = db.session.query(Quarantine).filter_by(in_observation=True).all()
@@ -142,6 +149,67 @@ def unmark_negative_users():
 
 
 @celery.task
+def del_inactive_users():
+
+    users_to_delete = db.session.query(User).filter(
+        User.is_active == False,
+        User.firstname != 'Anonymous').all()
+
+    for user_to_delete in users_to_delete:
+        #pre_date = datetime.date.today() - timedelta(days=14)
+        pre_date = datetime.datetime.now() - timedelta(days=14)
+        
+        # after 14 days from its last computed reservation  
+        inobservation = db.session.query(Quarantine).filter(
+            Quarantine.user_id == user_to_delete.id,
+            Quarantine.in_observation == True).first()
+
+        if inobservation is None:
+
+            rs = db.session.query(Reservation).filter(
+                Reservation.booker_id == user_to_delete.id,
+                Reservation.cancelled == False,
+                Reservation.date >= pre_date).all()
+
+            if len(rs)==0:
+                user_to_delete.email = 'invalid_email' + str(user_to_delete.id) + '@a.b'
+                user_to_delete.phone = 0
+                user_to_delete.firstname = 'Anonymous'
+                user_to_delete.lastname = 'Anonymous'
+                user_to_delete.password = 'pw'
+                user_to_delete.dateofbirth = None 
+                db.session.commit()
+            ''' a cosa serve questa cosa?? 
+            else:
+                for r in rs:
+                    # lascio queste stampe
+                    #print(r.date)
+                    #print(pre_date)
+                    #print(r.date==pre_date) 
+                    if r.date.date() == pre_date:
+                        user_to_delete.email = 'invalid_email' + str(user_to_delete.id) + '@a.b'
+                        user_to_delete.phone = 0
+                        user_to_delete.firstname = 'Anonymous'
+                        user_to_delete.lastname = 'Anonymous'
+                        user_to_delete.password = 'pw'
+                        user_to_delete.dateofbirth = None 
+                        db.session.commit()
+            '''
+
+        # cosi la reservation.date tiene conto dell'orario e fa perdere 
+        # le reservations con esattamente passati i 14 giorni
+        """
+        if len(rs) == 0 and inobservation is None:
+            user_to_delete.email = 'invalid_email' + str(user_to_delete.id) + '@a.b'
+            user_to_delete.phone = 0
+            user_to_delete.firstname = 'Anonymous'
+            user_to_delete.lastname = 'Anonymous'
+            user_to_delete.password = 'pw'
+            user_to_delete.dateofbirth = None 
+            db.session.commit()
+        """
+
+@celery.task
 def compute_like_count():
     likes = db.session.query(Like).filter(Like.marked == False).all()
     for like in likes:
@@ -149,8 +217,6 @@ def compute_like_count():
         restaurant.likes += 1
         like.marked = True
         db.session.commit()
-
-
 
 
 @celery.task
@@ -208,11 +274,8 @@ def send_email(subject, body, recv):
         print('impossibile spedire mail a: ' + str(recv) + str(ex))
 
 
-
-
 def get_mail_object():
     global mail
     if mail is None:
         mail = Mail(app)
     return mail
-

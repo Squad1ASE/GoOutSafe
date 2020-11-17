@@ -1,13 +1,13 @@
 import time
 import unittest
-from monolith.app import mail, compute_review_count, send_notifications, unmark_negative_users
-from monolith.app import send_email, get_mail_object, compute_like_count
+from monolith.app import ( mail, compute_review_count, send_notifications, 
+                            unmark_negative_users, send_email, 
+                            get_mail_object, compute_like_count )
 from monolith.classes.tests.conftest import test_app
-from datetime import datetime
-from datetime import timedelta
-import datetime as dt
-
 from monolith.database import User, db, Restaurant, Like, Review, Notification, Quarantine
+
+from datetime import datetime, timedelta
+import datetime as dt
 
 def add_user(email, phone, firstname, lastname, password, date,role):
     new_user = User()
@@ -31,6 +31,9 @@ def test_send_email(test_app):
             send_email('testing', 'test1', ['jackpeps@gmail.com'])
             assert len(outbox) == 1
             assert outbox[0].subject == "testing"
+
+
+# del_inactive_users task is tested on test_delete_user.py 
 
 
 def test_compute_like_count(test_app):

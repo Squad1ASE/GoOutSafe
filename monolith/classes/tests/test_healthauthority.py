@@ -1,6 +1,6 @@
-from monolith.database import db, User, Quarantine, Restaurant, Notification
+from monolith.database import db, User, Quarantine, Restaurant, Notification, Reservation, Seat
 from monolith.classes.tests.conftest import test_app
-from monolith.utilities import user_logout_EP, restaurant_reservation_POST_EP, restaurant_reservation_EP, create_restaurant_EP, create_user_EP, user_login_EP, insert_ha, customers_example, restaurant_example, restaurant_owner_example, health_authority_example,  mark_patient_as_positive
+from monolith.utilities import restaurant_h24_example, user_logout_EP, restaurant_reservation_POST_EP, restaurant_reservation_EP, create_restaurant_EP, create_user_EP, user_login_EP, insert_ha, customers_example, restaurant_example, restaurant_owner_example, health_authority_example,  mark_patient_as_positive
 import datetime
 from sqlalchemy import exc
 from datetime import timedelta
@@ -133,7 +133,7 @@ def test_contact_tracing_health_authority(test_app):
     assert user_login_EP(test_client, temp_owner_example_dict['email'], temp_owner_example_dict['password']).status_code == 200
     
     # create a restaurant
-    temp_restaurant_example = restaurant_example[2]
+    temp_restaurant_example = restaurant_h24_example
     assert create_restaurant_EP(test_client, temp_restaurant_example).status_code == 200
 
     restaurant = None
@@ -161,8 +161,16 @@ def test_contact_tracing_health_authority(test_app):
         '1',
         reservation_date_str,
         '2',
-        { 'guest-0-email':'notified01@ex.com'}
+        { 'guest1':'notified01@ex.com'}
     ).status_code == 666
+
+    # confirm the guests
+    with app.app_context():
+        seats = db.session.query(Seat).all()
+        for s in seats:
+            s.confirmed = True
+        db.session.commit()
+
 
     # make reservation 2
     date = datetime.datetime.now() + timedelta(days=2)
@@ -180,7 +188,7 @@ def test_contact_tracing_health_authority(test_app):
         '1',
         reservation_date_str,
         '2',
-        { 'guest-0-email':'notified01@ex.com'}
+        { 'guest1':'notified01@ex.com'}
     ).status_code == 666
 
 
@@ -194,4 +202,6 @@ def test_contact_tracing_health_authority(test_app):
     # test notification
     with app.app_context():
         notifications = db.session.query(Notification).all()
+        for n in notifications:
+            print(n.message)
         assert len(notifications) == 3

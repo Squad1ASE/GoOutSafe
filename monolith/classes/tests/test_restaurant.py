@@ -1,9 +1,12 @@
 from monolith.database import db, User, Restaurant, WorkingDay, Table, Dish, Reservation, Quarantine, Like, Review, Seat, Notification
 from monolith.classes.tests.conftest import test_app
-from monolith.utilities import create_user_EP, user_login_EP, user_logout_EP, create_restaurant_EP, customers_example, restaurant_example, restaurant_owner_example
-from monolith.utilities import restaurant_h24_example, reservation_times_example, reservation_guests_number_example, reservation_guests_email_example, restaurant_reservation_EP, reservation_dates_example
-from monolith.utilities import restaurant_reservation_GET_EP, restaurant_reservation_POST_EP, confirm_participants_EP
-from monolith.utilities import health_authority_example, mark_patient_as_positive, insert_ha
+from monolith.utilities import (create_user_EP, user_login_EP, user_logout_EP, 
+                                create_restaurant_EP, customers_example, restaurant_example, restaurant_owner_example,
+                                reservation_times_example, reservation_guests_number_example, restaurant_h24_example,
+                                reservation_guests_email_example, restaurant_reservation_EP, 
+                                reservation_dates_example, restaurant_reservation_GET_EP, 
+                                restaurant_reservation_POST_EP, confirm_participants_EP,
+                                health_authority_example, mark_patient_as_positive, insert_ha )
 import json
 from sqlalchemy import exc
 import datetime
@@ -920,7 +923,7 @@ def test_restaurant_reservation(test_app):
 
     guests_email_dict = dict()
     for i in range(reservation_guests_number_example[3]):
-        key = 'guest-'+str(i)+'-email'
+        key = 'guest'+str(i+1)
         guests_email_dict[key] = reservation_guests_email_example[i]
         
     assert restaurant_reservation_POST_EP(
@@ -931,7 +934,7 @@ def test_restaurant_reservation(test_app):
         reservation_guests_number_example[3],
         guests_email_dict
     ).status_code == 666
-    # check if reservation has been correctly insert in the db
+    # check if reservation has been correctly inserted in the db
     with app.app_context():
         # checking via db if reservation has been added
         assert db.session.query(Reservation).filter(
@@ -1017,7 +1020,7 @@ def test_restaurant_overlapping_reservation(test_app):
 
     guests_email_dict = dict()
     for i in range(reservation_guests_number_example[1]):
-        key = 'guest-'+str(i)+'-email'
+        key = 'guest'+str(i+1)
         guests_email_dict[key] = reservation_guests_email_example[i]
 
 
@@ -1220,7 +1223,7 @@ def test_restaurant_participants_confirmation(test_app):
 
     guests_email_dict = dict()
     for i in range(1):
-        key = 'guest-'+str(i)+'-email'
+        key = 'guest'+str(i+1)
         #guests_email_dict[key] = 'mail' + str(i) + '@mail.com'
         guests_email_dict[key] = reservation_guests_email_example[i]
 
@@ -1266,7 +1269,7 @@ def test_restaurant_participants_confirmation(test_app):
 
     guests_email_dict = dict()
     for i in range(1):
-        key = 'guest-'+str(i)+'-email'
+        key = 'guest'+str(i+1)
         #guests_email_dict[key] = 'mail' + str(i) + '@mail.com'
         guests_email_dict[key] = reservation_guests_email_example[i]
 
@@ -1344,7 +1347,7 @@ def test_restaurant_delete(test_app):
         '1',
         reservation_date_str,
         '2',
-        { 'guest-0-email':'notified01@ex.com'}
+        { 'guest1':'notified01@ex.com'}
     ).status_code == 666
 
     # a fake like and review to test the cancellation of them too when the restaurant is canceled

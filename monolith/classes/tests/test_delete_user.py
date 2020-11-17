@@ -7,7 +7,7 @@ from monolith.classes.tests.conftest import test_app
 from monolith.utilities import (create_user_EP, user_login_EP, user_logout_EP,
                                 create_restaurant_EP, restaurant_reservation_EP, 
                                 restaurant_reservation_POST_EP, create_review_EP,
-                                insert_ha, mark_patient_as_positive)
+                                insert_ha, mark_patient_as_positive, restaurant_h24_example)
 from monolith.app import del_inactive_users
 import json
 from sqlalchemy import exc
@@ -15,7 +15,7 @@ import datetime
 from monolith.app import del_inactive_users
 
 
-
+'''
 correct_restaurant = { 
     'name':'Trial01-EP' , 'lat':22, 'lon':22, 'phone':'3346734121', 
     'cuisine_type':[Restaurant.CUISINE_TYPES(1)], 'prec_measures':'leggeX', 'avg_time_of_stay':30,
@@ -23,6 +23,8 @@ correct_restaurant = {
     'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro',
     'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('12:00','15:00'),('19:00','23:00')"
 }
+'''
+correct_restaurant = restaurant_h24_example
 
 correct_reservation = {
     'date':'28/12/2020', #in the future 
@@ -105,7 +107,7 @@ def test_delete_user(test_app):
         reservation_datetime = datetime.datetime.strptime(reservation_date_str, "%d/%m/%Y %H:%M")        
         guests_email_dict = dict()
         for i in range(correct_reservation['guests']):
-            key = 'guest-'+str(i)+'-email'
+            key = 'guest'+str(i+1)
             guests_email_dict[key] = correct_email[i]  
         assert restaurant_reservation_POST_EP(test_client,
                                             restaurant_id='1',
@@ -119,13 +121,7 @@ def test_delete_user(test_app):
             Reservation.table_id == 1,#8, 
             Reservation.date == reservation_datetime
         ).first() 
-        assert reservation_test != None
-        #check also seat has been added
-        #seats = db.session.query(Seat).filter_by(reservation_id=restaurant_test.id).all()
-        #assert len(seats) == correct_reservation['guests'] + 1 
-        #assert seats[0].guests_email ==  'user_customer2_example@test.com' 
-        #assert seats[1].guests_email ==  'user_customer3_example@test.com' 
-        #assert seats[2].guests_email ==  'user_customer_example@test.com' 
+        assert reservation_test != None 
         
         # unregister the customer, also all its future reservations 
         assert test_client.delete('/delete_user', follow_redirects=True).status_code == 200    
@@ -159,7 +155,7 @@ def test_delete_user(test_app):
         reservation_datetime = datetime.datetime.strptime(reservation_date_str, "%d/%m/%Y %H:%M")        
         guests_email_dict = dict()
         for i in range(correct_reservation['guests']):
-            key = 'guest-'+str(i)+'-email'
+            key = 'guest'+str(i+1)
             guests_email_dict[key] = correct_email[i]  
         assert restaurant_reservation_POST_EP(test_client,
                                             restaurant_id='1',
@@ -198,7 +194,7 @@ def test_delete_user(test_app):
 
         # look for a table in a correct date and time
         startdate = datetime.date.today()
-        enddate = startdate + datetime.timedelta(days=-14) # placing for 14 days ago
+        enddate = startdate - datetime.timedelta(days=15) # placing for 14 days ago
         assert restaurant_reservation_EP(test_client, 
                                             restaurant_id='1', #restaurant_test.id, 
                                             date=enddate, 
@@ -209,7 +205,7 @@ def test_delete_user(test_app):
         reservation_datetime = datetime.datetime.strptime(reservation_date_str, "%d/%m/%Y %H:%M")        
         guests_email_dict = dict()
         for i in range(correct_reservation['guests']):
-            key = 'guest-'+str(i)+'-email'
+            key = 'guest'+str(i+1)
             guests_email_dict[key] = correct_email[i]  
         assert restaurant_reservation_POST_EP(test_client,
                                             restaurant_id='1',

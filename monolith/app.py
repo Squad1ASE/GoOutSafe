@@ -156,7 +156,8 @@ def del_inactive_users():
         User.firstname != 'Anonymous').all()
 
     for user_to_delete in users_to_delete:
-        pre_date = datetime.date.today() - timedelta(days=14)
+        #pre_date = datetime.date.today() - timedelta(days=14)
+        pre_date = datetime.datetime.now() - timedelta(days=14)
         
         # after 14 days from its last computed reservation  
         inobservation = db.session.query(Quarantine).filter(
@@ -178,6 +179,7 @@ def del_inactive_users():
                 user_to_delete.password = 'pw'
                 user_to_delete.dateofbirth = None 
                 db.session.commit()
+            ''' a cosa serve questa cosa?? 
             else:
                 for r in rs:
                     # lascio queste stampe
@@ -192,6 +194,7 @@ def del_inactive_users():
                         user_to_delete.password = 'pw'
                         user_to_delete.dateofbirth = None 
                         db.session.commit()
+            '''
 
         # cosi la reservation.date tiene conto dell'orario e fa perdere 
         # le reservations con esattamente passati i 14 giorni

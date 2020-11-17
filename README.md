@@ -7,5 +7,5 @@ docker-compose -f docker-compose.test.yml up
 
 To run the program:
 ```
-docker-compose up
+sudo docker-compose up --build --scale flask=<number_of_app_instances>
 ```

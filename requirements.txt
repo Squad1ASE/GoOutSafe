@@ -1,5 +1,6 @@
 flask
 flask-login
+psycopg2-binary
 celery
 redis
 flask-wtf

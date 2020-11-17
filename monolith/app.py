@@ -23,7 +23,8 @@ def create_app():
     app = Flask(__name__)
     app.config['WTF_CSRF_SECRET_KEY'] = 'A SECRET KEY'
     app.config['SECRET_KEY'] = 'ANOTHER ONE'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gooutsafe.db'
+    #app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:postgres@postgres:5432/postgres'
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URI']
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     
@@ -40,7 +41,11 @@ def create_app():
 
     db.init_app(app)
     login_manager.init_app(app)
-    db.create_all(app=app)
+    try:
+        db.create_all(app=app)
+    except Exception as e:
+        print(e)
+
 
     # TODO THIS SECTION MUST BE REMOVED, ONLY FOR DEMO
     # already tested EndPoints are used to create examples
@@ -51,39 +56,43 @@ def create_app():
         q = db.session.query(User).filter(User.email == 'admin@admin.com')
         adm = q.first()
         if adm is None:
-            # create a first admin user 
-            # test for a user defined in database.db
-            example = User()
-            example.email = 'admin@admin.com'
-            example.phone = '3333333333'
-            example.firstname = 'Admin'
-            example.lastname = 'Admin'
-            example.set_password('admin')
-            example.dateofbirth = datetime.date(2020, 10, 5)
-            example.role = 'admin'           
-            example.is_admin = True
-            db.session.add(example)
-            db.session.commit()
+            try: 
+                # create a first admin user 
+                # test for a user defined in database.db
+                example = User()
+                example.email = 'admin@admin.com'
+                example.phone = '3333333333'
+                example.firstname = 'Admin'
+                example.lastname = 'Admin'
+                example.set_password('admin')
+                example.dateofbirth = datetime.date(2020, 10, 5)
+                example.role = 'admin'           
+                example.is_admin = True
+                db.session.add(example)
+                db.session.commit()
 
-    
+        
 
-    test_client = app.test_client()
+                test_client = app.test_client()
 
-    insert_ha(db, app)
-    
-    for user in customers_example:
-        create_user_EP(test_client,**user)
+                insert_ha(db, app)
+                
+                for user in customers_example:
+                    create_user_EP(test_client,**user)
 
-    for user in restaurant_owner_example:
-        create_user_EP(test_client,**user)
+                for user in restaurant_owner_example:
+                    create_user_EP(test_client,**user)
 
-    for usr_idx,restaurant in enumerate(restaurant_example):
-        user_login_EP(test_client, restaurant_owner_example[usr_idx]['email'], 
-                                    restaurant_owner_example[usr_idx]['password'])
+                for usr_idx,restaurant in enumerate(restaurant_example):
+                    user_login_EP(test_client, restaurant_owner_example[usr_idx]['email'], 
+                                                restaurant_owner_example[usr_idx]['password'])
 
-        create_restaurant_EP(test_client,restaurant)
+                    create_restaurant_EP(test_client,restaurant)
 
-        user_logout_EP(test_client)
+                    user_logout_EP(test_client)
+
+            except Exception as e:
+                print(e)
 
         
 
@@ -96,27 +105,29 @@ def create_app():
 def make_celery(app):
     celery = Celery(
         app.import_name,
-        backend='redis://localhost:6379',
-        broker='redis://localhost:6379'
+        broker=os.environ['CELERY_BROKER_URL'],
+        backend=os.environ['CELERY_BACKEND_URL']
+        #backend='redis://localhost:6379',
+        #broker='redis://localhost:6379'
     )
     celery.conf.update(app.config)
     celery.conf.beat_schedule = {'unmark-negative-users': {
-        'task': 'app.unmark_negative_users',
+        'task': 'monolith.app.unmark_negative_users',
         'schedule': 60.0
     }, 'compute-like-count': {
-        'task': 'app.compute_like_count',
+        'task': 'monolith.app.compute_like_count',
         'schedule': 30.0
     }, 'compute-review-count': {
-        'task': 'app.compute_review_count',
+        'task': 'monolith.app.compute_review_count',
         'schedule': 30.0
     }, 'compute-contact-tracing': {
-        'task': 'app.send_notifications',
+        'task': 'monolith.app.send_notifications',
         'schedule': 60.0
     }, 'run-every-1-minute': {
-        'task': 'app.print_hello',
+        'task': 'monolith.app.print_hello',
         'schedule': 3.0
     }, 'run-every-1-minute': {
-        'task': 'app.del_inactive_users',
+        'task': 'monolith.app.del_inactive_users',
         'schedule': 3.0
     }
 

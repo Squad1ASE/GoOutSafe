@@ -30,7 +30,7 @@
             {% for restaurant in restaurants: %}
             <li>
             {{restaurant.name}}     
-            <a href="{{base_url}}/{{restaurant.id}}">See Details!</a>
+            <a href="/{{restaurant.id}}">See Details!</a>
             </li>
             {% endfor %}
           </ul>
@@ -64,8 +64,8 @@
             {% for restaurant in restaurants: %}
             <li>
             {{restaurant.name}}     
-            <a href="{{base_url}}/edit_restaurant_informations/{{restaurant.id}}">Edit</a> 
-            <a href="{{base_url}}/restaurants/delete/{{restaurant.id}}">Delete</a>
+            <a href="/edit_restaurant_informations/{{restaurant.id}}">Edit</a> 
+            <a href="/restaurants/delete/{{restaurant.id}}">Delete</a>
             </li>
             {% endfor %}
           </ul>

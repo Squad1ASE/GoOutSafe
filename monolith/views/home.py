@@ -13,7 +13,7 @@ def index():
         
         if current_user.role == 'admin':
             restaurants = db.session.query(Restaurant)
-            return render_template("homepage_info.html", restaurants=restaurants, base_url="http://127.0.0.1:5000/restaurants")
+            return render_template("homepage_info.html", restaurants=restaurants)
 
 
         if current_user.role == 'ha':
@@ -62,7 +62,7 @@ def index():
         if current_user.role == 'owner':
             restaurants = db.session.query(Restaurant).filter(Restaurant.owner_id == current_user.id)
             notifications = db.session.query(Notification).filter(Notification.user_id == current_user.id).all()
-            return render_template("homepage_info.html", notifications=notifications, restaurants=restaurants, base_url="http://127.0.0.1:5000") 
+            return render_template("homepage_info.html", notifications=notifications, restaurants=restaurants) 
     else:
         return render_template("homepage.html") 
 

@@ -236,9 +236,10 @@ restaurant_example = [
 ]
 
 restaurant_h24_example = {
-    'name':'Restaurant 1', 'lat':43.7216621, 'lon':10.4083723, 'phone':'111111', 
+    'name':'Restaurant h24', 'lat':43.7216621, 'lon':10.4083723, 'phone':'111111', 
     'cuisine_type':[Restaurant.CUISINE_TYPES(1),Restaurant.CUISINE_TYPES(6)], 'prec_measures':'leggeX', 'avg_time_of_stay':15,
     'tables-0-table_name':'res1red', 'tables-0-capacity':2, 
+    'tables-1-table_name':'res24blu', 'tables-1-capacity':4, 
     'dishes-0-dish_name':'pizza', 'dishes-0-price':4, 'dishes-0-ingredients':'pomodoro, mozzarella',
     'dishes-1-dish_name':'pasta agli scampi', 'dishes-1-price':4, 'dishes-1-ingredients':'pasta, scampi',
     'workingdays-0-day': WorkingDay.WEEK_DAYS(1), 'workingdays-0-work_shifts':"('00:00','23:59')",

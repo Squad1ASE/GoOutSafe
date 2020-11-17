@@ -1,5 +1,5 @@
 from flask import Blueprint, redirect, render_template, request, make_response
-from monolith.database import db, Review, Restaurant, Like, WorkingDay, Table, Dish, Seat, Reservation, Quarantine, Notification
+from monolith.database import db, User, Review, Restaurant, Like, WorkingDay, Table, Dish, Seat, Reservation, Quarantine, Notification
 from monolith.auth import admin_required, current_user
 from flask_login import (current_user, login_user, logout_user,
                          login_required)
@@ -166,6 +166,7 @@ def restaurant_sheet(restaurant_id):
     if request.method == 'POST':
 
                 if form.validate_on_submit():
+                    tavoli = db.session.query(Table).filter(Table.restaurant_id == restaurant_id).all()
                     # 1 transform datetime from form in week day
                     # 2 search inside working day DB with restaurant ID, check if in the specific day and time the restaurant is open
                     # 3 check the list of available tables, the search starts from reservation (consider avg_stay_time)
@@ -308,11 +309,18 @@ def reservation(restaurant_id):
     guests = int(request.args.get('guests')) -1
     date = datetime.datetime.strptime(request.args.get('date'), "%d/%m/%Y %H:%M")
 
-    class test(FlaskForm):
-        guest = f.FieldList(f.FormField(SubReservationPeopleEmail), min_entries=guests, max_entries=guests)
-        display = ['guest']
-    
-    form = test()
+        
+    class ReservationForm(FlaskForm):
+        pass
+
+    guests_field_list = []
+    for idx in range(guests):
+        setattr(ReservationForm, 'guest'+str(idx+1), f.StringField('guest '+str(idx+1)+ ' email', validators=[Length(10, 64), Email()]))
+        guests_field_list.append('guest'+str(idx+1))
+
+    setattr(ReservationForm, 'display', guests_field_list)
+
+    form = ReservationForm()
 
     if request.method == 'POST':
 
@@ -339,14 +347,15 @@ def reservation(restaurant_id):
 
                 db.session.add(reservation)
                 db.session.commit()
-                for emailField in form.guest.data:
+                for emailField in guests_field_list:
+                    
                     seat = Seat()
                     seat.reservation_id = reservation.id
-                    seat.guests_email = emailField['email']
+                    seat.guests_email = form[emailField].data
                     seat.confirmed = False
-
+                    
                     db.session.add(seat)
-
+                    
                 # seat of the booker
                 seat = Seat()
                 seat.reservation_id = reservation.id
@@ -354,7 +363,6 @@ def reservation(restaurant_id):
                 seat.confirmed = False
 
                 db.session.add(seat)
-
                 db.session.commit()
 
                 # this isn't an error
